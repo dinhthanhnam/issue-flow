@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\WorkspaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable(['name', 'slug'])]
 class Workspace extends Model
 {
-    /** @use HasFactory<\Database\Factories\WorkspaceFactory> */
+    /** @use HasFactory<WorkspaceFactory> */
     use HasFactory;
 
     protected function casts(): array
@@ -34,9 +35,17 @@ class Workspace extends Model
     {
         return $this->hasMany(Project::class);
     }
+
     #[Scope]
     public function archived_at(Builder $query): void
     {
         $query->whereNotNull('archived_at');
+    }
+
+    public function hasMember(User $user): bool
+    {
+        return $this->users()
+            ->whereKey($user->id)
+            ->exists();
     }
 }

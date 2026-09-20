@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class ProjectPolicy
 {
@@ -66,16 +65,11 @@ class ProjectPolicy
 
     public function viewIssues(User $user, Project $project): bool
     {
-        return $project->workspace
-            ->users()
-            ->whereKey($user->id)
-            ->exists();
+        return $project->workspace->hasMember($user);
     }
+
     public function createIssue(User $user, Project $project): bool
     {
-        return $project->workspace
-            ->users()
-            ->whereKey($user->id)
-            ->exists();
+        return $project->workspace->hasMember($user);
     }
 }

@@ -4,7 +4,6 @@ namespace App\Policies;
 
 use App\Models\Issue;
 use App\Models\User;
-use Illuminate\Auth\Access\Response;
 
 class IssuePolicy
 {
@@ -21,7 +20,7 @@ class IssuePolicy
      */
     public function view(User $user, Issue $issue): bool
     {
-        return false;
+        return $issue->project->workspace->hasMember($user);
     }
 
     /**
