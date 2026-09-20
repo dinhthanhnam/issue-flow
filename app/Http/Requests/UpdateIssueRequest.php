@@ -5,9 +5,9 @@ namespace App\Http\Requests;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
 use App\Models\Issue;
-use Hoa\Compiler\Llk\Rule\Rule;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateIssueRequest extends FormRequest
 {
