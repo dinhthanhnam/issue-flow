@@ -4,18 +4,19 @@ namespace App\Models;
 
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
+use Database\Factories\IssueFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['project_id', 'reporter_id', 'assignee_id', 'number', 'title', 'description', 'status', 'priority'])]
 class Issue extends Model
 {
-    /** @use HasFactory<\Database\Factories\IssueFactory> */
+    /** @use HasFactory<IssueFactory> */
     use HasFactory;
 
     protected function casts(): array
@@ -36,6 +37,11 @@ class Issue extends Model
         return $this->hasMany(Comment::class);
     }
 
+    public function activities(): HasMany
+    {
+        return $this->hasMany(IssueActivity::class);
+    }
+
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reporter_id');
@@ -44,12 +50,6 @@ class Issue extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
-    }
-
-    #[Scope]
-    protected function open(Builder $query): void
-    {
-        $query->where('status', '!=', IssueStatus::Done);
     }
 
     #[Scope]

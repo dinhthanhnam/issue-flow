@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Issues\CreateIssue;
+use App\Actions\Issues\UpdateIssue;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
 use App\Http\Requests\IndexIssueRequest;
@@ -13,7 +14,6 @@ use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 
@@ -29,13 +29,11 @@ class IssueController extends Controller
             ->with(['project', 'reporter', 'assignee'])
             ->when(
                 isset($data['status']),
-                fn (Builder $query) =>
-                $query->status(IssueStatus::from($data['status'])),
+                fn (Builder $query) => $query->status(IssueStatus::from($data['status'])),
             )
             ->when(
                 isset($data['assignee_id']),
-                fn (Builder $query) =>
-                $query->assignedTo($data['assignee_id']),
+                fn (Builder $query) => $query->assignedTo($data['assignee_id']),
             )
             ->latest()
             ->paginate(20);
@@ -60,19 +58,23 @@ class IssueController extends Controller
         );
 
         $issue->load(['project', 'reporter', 'assignee']);
+
         return new IssueResource($issue);
     }
 
     public function update(
         UpdateIssueRequest $request,
-        Issue $issue
-    ): IssueResource
-    {
-        $data = $request->validated();
-
-        $issue->update($data);
+        Issue $issue,
+        UpdateIssue $updateIssue,
+    ): IssueResource {
+        $issue = $updateIssue->handle(
+            issue: $issue,
+            user: $request->user(),
+            data: $request->validated(),
+        );
 
         $issue->load(['project', 'reporter', 'assignee']);
+
         return new IssueResource($issue);
     }
 }
