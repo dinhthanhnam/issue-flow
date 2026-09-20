@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
+use App\Http\Middleware\EnsureWorkspaceIsActive;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('projects.issues.index');
 
     Route::post('/projects/{project}/issues', [IssueController::class, 'store'])
+        ->middleware(EnsureWorkspaceIsActive::class)
         ->name('projects.issues.store');
 
     Route::patch('/issues/{issue}', [IssueController::class, 'update'])
