@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,5 +15,7 @@ Route::get('/projects/{project}/issues', [IssueController::class, 'index'])->mid
 Route::patch('/issues/{issue}', [IssueController::class, 'update'])
     ->middleware('auth')
     ->name('issues.update');
+Route::get('/issues/{issue}/comments', [CommentController::class, 'index'])->middleware('auth')->name('issues.comments.index');
+Route::post('/issues/{issue}/comments', [CommentController::class, 'store'])->middleware('auth')->name('issues.comments.store');
 
 require __DIR__.'/settings.php';
