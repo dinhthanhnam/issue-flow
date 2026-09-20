@@ -64,6 +64,13 @@ class ProjectPolicy
         return false;
     }
 
+    public function viewIssues(User $user, Project $project): bool
+    {
+        return $project->workspace
+            ->users()
+            ->whereKey($user->id)
+            ->exists();
+    }
     public function createIssue(User $user, Project $project): bool
     {
         return $project->workspace

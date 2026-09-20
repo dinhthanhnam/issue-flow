@@ -9,7 +9,8 @@ use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Query\Builder;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['project_id', 'reporter_id', 'assignee_id', 'number', 'title', 'description', 'status', 'priority'])]
 class Issue extends Model
@@ -44,5 +45,17 @@ class Issue extends Model
     protected function open(Builder $query): void
     {
         $query->where('status', '!=', IssueStatus::Done);
+    }
+
+    #[Scope]
+    protected function status(Builder $query, IssueStatus $status): void
+    {
+        $query->where('status', $status);
+    }
+
+    #[Scope]
+    protected function assignedTo(Builder $query, int $userId): void
+    {
+        $query->where('assignee_id', $userId);
     }
 }

@@ -4,20 +4,41 @@ namespace App\Http\Controllers;
 
 use App\Actions\Issues\CreateIssue;
 use App\Enums\IssuePriority;
+use App\Enums\IssueStatus;
+use App\Http\Requests\IndexIssueRequest;
 use App\Http\Requests\StoreIssueRequest;
+use App\Http\Requests\UpdateIssueRequest;
 use App\Http\Resources\IssueResource;
+use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 
 class IssueController extends Controller
 {
-    public function index(Project $project): AnonymousResourceCollection
+    public function index(IndexIssueRequest $request, Project $project): AnonymousResourceCollection
     {
+        Gate::authorize('viewIssues', $project);
+
+        $data = $request->validated();
+
         $issues = $project->issues()
+            ->with(['project', 'reporter', 'assignee'])
+            ->when(
+                isset($data['status']),
+                fn (Builder $query) =>
+                $query->status(IssueStatus::from($data['status'])),
+            )
+            ->when(
+                isset($data['assignee_id']),
+                fn (Builder $query) =>
+                $query->assignedTo($data['assignee_id']),
+            )
             ->latest()
-            ->get();
+            ->paginate(20);
 
         return IssueResource::collection($issues);
     }
@@ -37,6 +58,19 @@ class IssueController extends Controller
             assignee: isset($data['assignee_id']) ? User::query()->findOrFail($data['assignee_id']) : null,
             priority: isset($data['priority']) ? IssuePriority::from($data['priority']) : IssuePriority::Medium,
         );
+
+        $issue->load(['project', 'reporter', 'assignee']);
+        return new IssueResource($issue);
+    }
+
+    public function update(
+        UpdateIssueRequest $request,
+        Issue $issue
+    ): IssueResource
+    {
+        $data = $request->validated();
+
+        $issue->update($data);
 
         $issue->load(['project', 'reporter', 'assignee']);
         return new IssueResource($issue);

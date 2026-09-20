@@ -127,3 +127,23 @@ test('a workspace member can list project issues', function () {
         ->assertSuccessful()
         ->assertJsonCount(3, 'data');
 });
+
+test('a user outside the workspace cannot list project issues', function () {
+    $member = User::factory()->create();
+    $outsider = User::factory()->create();
+
+    $workspace = Workspace::factory()->create();
+
+    $workspace->users()->attach($member, [
+        'role' => 'member',
+    ]);
+
+    $project = Project::factory()->create([
+        'workspace_id' => $workspace->id,
+    ]);
+
+    $this
+        ->actingAs($outsider)
+        ->getJson(route('projects.issues.index', $project))
+        ->assertForbidden();
+});
