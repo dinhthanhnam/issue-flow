@@ -24,17 +24,11 @@ class NotifyIssueAssignee implements ShouldQueue
     {
         $change = $event->changes['assignee_id'] ?? null;
 
-        if ($change === null) {
+        if ($change === null || $change['new'] === null) {
             return;
         }
 
-        $newAssigneeId = $change['new'];
-
-        if ($newAssigneeId === null) {
-            return;
-        }
-
-        $assignee = User::query()->find($newAssigneeId);
+        $assignee = User::query()->find($change['new']);
 
         $assignee?->notify(
             new IssueAssigned($event->issue)

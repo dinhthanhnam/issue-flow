@@ -29,12 +29,24 @@ class UpdateIssueRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var Issue $issue */
+        $issue = $this->route('issue');
+
         return [
             'title' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', Rule::enum(IssueStatus::class)],
             'priority' => ['sometimes', Rule::enum(IssuePriority::class)],
-            'assignee_id' => ['sometimes', 'nullable', 'integer'],
+            'assignee_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('user_workspace', 'user_id')
+                    ->where(
+                        'workspace_id',
+                        $issue->project->workspace_id,
+                    ),
+            ],
         ];
     }
 }

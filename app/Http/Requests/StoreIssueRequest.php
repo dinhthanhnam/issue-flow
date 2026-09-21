@@ -5,7 +5,6 @@ namespace App\Http\Requests;
 use App\Enums\IssuePriority;
 use App\Models\Project;
 use App\Models\User;
-use App\Models\Workspace;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,6 +18,7 @@ class StoreIssueRequest extends FormRequest
     {
         /** @var Project $project */
         $project = $this->route('project');
+
         return $this->user()?->can('createIssue', $project) ?? false;
     }
 
@@ -31,6 +31,7 @@ class StoreIssueRequest extends FormRequest
     {
         /** @var Project $project */
         $project = $this->route('project');
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -42,7 +43,7 @@ class StoreIssueRequest extends FormRequest
             ],            'priority' => [
                 'sometimes',
                 Rule::enum(IssuePriority::class),
-            ]
+            ],
         ];
     }
 }
