@@ -25,7 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
         $middleware->alias([
-            'workspace.active' => EnsureWorkspaceIsActive::class,
+            'project.workspace.active' => EnsureWorkspaceIsActive::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
