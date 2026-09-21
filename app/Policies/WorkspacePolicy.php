@@ -64,9 +64,22 @@ class WorkspacePolicy
     /**
      * Determine whether the user can restore the model.
      */
+    public function archive(User $user, Workspace $workspace): bool
+    {
+        return $this->hasRole(
+            $user,
+            $workspace,
+            [WorkspaceRole::Owner],
+        );
+    }
+
     public function restore(User $user, Workspace $workspace): bool
     {
-        return false;
+        return $this->hasRole(
+            $user,
+            $workspace,
+            [WorkspaceRole::Owner],
+        );
     }
 
     /**

@@ -18,7 +18,12 @@ class WorkspaceResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'slug' => $this->slug,
+            'archived_at' => $this->archived_at,
             'created_at' => $this->created_at,
+            'role' => $this->whenPivotLoaded(
+                'user_workspace',
+                fn () => $this->pivot->role
+            ),
         ];
     }
 }

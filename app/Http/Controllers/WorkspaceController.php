@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkspaceRole;
+use App\Http\Requests\CreateWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Http\Resources\WorkspaceResource;
+use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
@@ -31,16 +34,20 @@ class WorkspaceController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(CreateWorkspaceRequest $request): JsonResponse
     {
-        //
+        $data = $request->validated();
+        $workspace = Workspace::create($data);
+
+        return response()->json(new WorkspaceResource($workspace), 201);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreWorkspaceRequest $request): WorkspaceResource
-    {
+    public function store(
+        StoreWorkspaceRequest $request
+    ): JsonResponse {
         $workspace = DB::transaction(function () use ($request) {
             $workspace = Workspace::create($request->validated());
 
@@ -51,7 +58,7 @@ class WorkspaceController extends Controller
             return $workspace;
         });
 
-        return new WorkspaceResource($workspace);
+        return response()->json(new WorkspaceResource($workspace), 204);
     }
 
     /**
@@ -75,11 +82,14 @@ class WorkspaceController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateWorkspaceRequest $request, Workspace $workspace): WorkspaceResource
-    {
+    public function update(
+        UpdateWorkspaceRequest $request,
+        Workspace $workspace,
+        User $user,
+    ): JsonResponse {
         $workspace->update($request->validated());
 
-        return new WorkspaceResource($workspace);
+        return response()->json(new WorkspaceResource($workspace));
     }
 
     /**
@@ -90,20 +100,24 @@ class WorkspaceController extends Controller
         //
     }
 
-    public function archive(Request $request, Workspace $workspace): WorkspaceResource
+    public function archive(Workspace $workspace): WorkspaceResource
     {
-        $this->authorize('update', $workspace);
+        Gate::authorize('archive', $workspace);
 
-        $workspace->archive();
+        $workspace->update([
+            'archived_at' => now(),
+        ]);
 
         return new WorkspaceResource($workspace);
     }
 
-    public function restore(Request $request, Workspace $workspace): WorkspaceResource
+    public function restore(Workspace $workspace): WorkspaceResource
     {
-        $this->authorize('update', $workspace);
+        Gate::authorize('restore', $workspace);
 
-        $workspace->restore();
+        $workspace->update([
+            'archived_at' => null,
+        ]);
 
         return new WorkspaceResource($workspace);
     }
