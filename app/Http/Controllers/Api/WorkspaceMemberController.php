@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Actions\Workspaces\RemoveWorkspaceMember;
 use App\Enums\WorkspaceRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreWorkspaceMemberRequest;
@@ -11,7 +12,6 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
@@ -78,6 +78,7 @@ class WorkspaceMemberController extends Controller
         Request $request,
         Workspace $workspace,
         User $user,
+        RemoveWorkspaceMember $removeWorkspaceMember,
     ): JsonResponse {
         Gate::authorize('manageMembers', $workspace);
 
@@ -97,14 +98,7 @@ class WorkspaceMemberController extends Controller
             abort(403);
         }
 
-        DB::transaction(function () use ($workspace, $user): void {
-            DB::table('project_user')
-                ->where('user_id', $user->id)
-                ->whereIn('project_id', $workspace->projects()->select('id'))
-                ->delete();
-
-            $workspace->users()->detach($user->id);
-        });
+        $removeWorkspaceMember->handle($workspace, $user);
 
         return response()->json(null, 204);
     }

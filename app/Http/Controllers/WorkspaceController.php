@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\WorkspaceRole;
+use App\Actions\Workspaces\CreateWorkspace;
 use App\Http\Requests\CreateWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
@@ -11,7 +11,6 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class WorkspaceController extends Controller
@@ -38,17 +37,14 @@ class WorkspaceController extends Controller
     }
 
     public function store(
-        StoreWorkspaceRequest $request
+        StoreWorkspaceRequest $request,
+        CreateWorkspace $createWorkspace,
     ): JsonResponse {
-        $workspace = DB::transaction(function () use ($request) {
-            $workspace = Workspace::create($request->validated());
-
-            $workspace->users()->attach($request->user()->id, [
-                'role' => WorkspaceRole::Owner->value,
-            ]);
-
-            return $workspace;
-        });
+        $workspace = $createWorkspace->handle(
+            owner: $request->user(),
+            name: $request->string('name')->toString(),
+            slug: $request->string('slug')->toString(),
+        );
 
         return new WorkspaceResource($workspace)
             ->response()
