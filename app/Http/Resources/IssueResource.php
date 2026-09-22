@@ -37,6 +37,8 @@ class IssueResource extends JsonResource
                 'name' => $this->assignee->name,
             ] : null,
 
+            'labels' => LabelResource::collection($this->whenLoaded('labels')),
+
             'created_at' => $this->created_at,
         ];
     }

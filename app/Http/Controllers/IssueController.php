@@ -26,7 +26,7 @@ class IssueController extends Controller
         $data = $request->validated();
 
         $issues = $project->issues()
-            ->with(['project', 'reporter', 'assignee'])
+            ->with(['project', 'reporter', 'assignee', 'labels'])
             ->when(
                 isset($data['status']),
                 fn (Builder $query) => $query->status(IssueStatus::from($data['status'])),
@@ -57,7 +57,7 @@ class IssueController extends Controller
             priority: isset($data['priority']) ? IssuePriority::from($data['priority']) : IssuePriority::Medium,
         );
 
-        $issue->load(['project', 'reporter', 'assignee']);
+        $issue->load(['project', 'reporter', 'assignee', 'labels']);
 
         return new IssueResource($issue)
             ->response()
@@ -75,7 +75,7 @@ class IssueController extends Controller
             data: $request->validated(),
         );
 
-        $issue->load(['project', 'reporter', 'assignee']);
+        $issue->load(['project', 'reporter', 'assignee', 'labels']);
 
         return new IssueResource($issue)->response();
     }

@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\ProjectMemberController;
 use App\Http\Controllers\Api\WorkspaceMemberController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\IssueLabelController;
+use App\Http\Controllers\LabelController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Http\Request;
@@ -61,6 +63,21 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('projects.members.update');
     Route::delete('projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy'])
         ->name('projects.members.destroy');
+
+    // Label routes
+    Route::get('workspaces/{workspace}/labels', [LabelController::class, 'index'])
+        ->name('workspaces.labels.index');
+    Route::post('workspaces/{workspace}/labels', [LabelController::class, 'store'])
+        ->name('workspaces.labels.store');
+    Route::patch('labels/{label}', [LabelController::class, 'update'])
+        ->name('labels.update');
+    Route::delete('labels/{label}', [LabelController::class, 'destroy'])
+        ->name('labels.destroy');
+
+    Route::post('issues/{issue}/labels/{label}', [IssueLabelController::class, 'store'])
+        ->name('issues.labels.store');
+    Route::delete('issues/{issue}/labels/{label}', [IssueLabelController::class, 'destroy'])
+        ->name('issues.labels.destroy');
 
     // Issues routes
     Route::get('projects/{project}/issues', [IssueController::class, 'index'])

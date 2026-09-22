@@ -15,11 +15,13 @@ class Label extends Model
     /** @use HasFactory<LabelFactory> */
     use HasFactory;
 
+    /** @return BelongsTo<Workspace, $this> */
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
     }
 
+    /** @return BelongsToMany<Issue, $this> */
     public function issues(): BelongsToMany
     {
         return $this->belongsToMany(Issue::class);
