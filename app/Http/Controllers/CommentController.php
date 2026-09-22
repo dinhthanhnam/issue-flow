@@ -5,12 +5,12 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Issue;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 
 class CommentController extends Controller
 {
-    public function index(Issue $issue): AnonymousResourceCollection
+    public function index(Issue $issue): JsonResponse
     {
         Gate::authorize('view', $issue);
 
@@ -19,13 +19,13 @@ class CommentController extends Controller
                 ->with('user')
                 ->oldest()
                 ->get()
-        );
+        )->response();
     }
 
     public function store(
         StoreCommentRequest $request,
         Issue $issue,
-    ): CommentResource {
+    ): JsonResponse {
         $data = $request->validated();
         $comment = $issue->comments()->create([
             'user_id' => $request->user()->id,
@@ -34,6 +34,8 @@ class CommentController extends Controller
 
         $comment->load('user');
 
-        return new CommentResource($comment);
+        return new CommentResource($comment)
+            ->response()
+            ->setStatusCode(201);
     }
 }

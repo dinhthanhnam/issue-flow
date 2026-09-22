@@ -1,10 +1,9 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\RemoveWorkspaceMember;
 use App\Enums\WorkspaceRole;
-use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreWorkspaceMemberRequest;
 use App\Http\Requests\UpdateWorkspaceMemberRequest;
 use App\Http\Resources\WorkspaceMemberResource;
@@ -16,9 +15,8 @@ use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
 {
-    public function index(
-        Workspace $workspace
-    ): JsonResponse {
+    public function index(Workspace $workspace): JsonResponse
+    {
         Gate::authorize('view', $workspace);
 
         $members = $workspace->users()
@@ -32,17 +30,15 @@ class WorkspaceMemberController extends Controller
         StoreWorkspaceMemberRequest $request,
         Workspace $workspace,
     ): JsonResponse {
+        $data = $request->validated();
 
-        $userId = $request->integer('user_id');
-        $role = WorkspaceRole::from($request->string('role')->toString());
-
-        $workspace->users()->attach($userId, [
-            'role' => $role->value,
+        $workspace->users()->attach($data['user_id'], [
+            'role' => $data['role'],
         ]);
 
         $member = $workspace->users()
             ->withPivot('role')
-            ->findOrFail($userId);
+            ->findOrFail($data['user_id']);
 
         return new WorkspaceMemberResource($member)
             ->response()
@@ -54,17 +50,18 @@ class WorkspaceMemberController extends Controller
         Workspace $workspace,
         User $user,
     ): JsonResponse {
-        $member = $workspace->users()
-            ->withPivot('role')
+        $currentRole = $workspace->users()
             ->whereKey($user->id)
-            ->firstOrFail();
+            ->value('user_workspace.role');
 
-        if ($member->pivot->role === WorkspaceRole::Owner->value) {
+        abort_if($currentRole === null, 404);
+
+        if ($currentRole === WorkspaceRole::Owner->value) {
             abort(422, 'Owner role cannot be changed through this endpoint.');
         }
 
         $workspace->users()->updateExistingPivot($user->id, [
-            'role' => $request->string('role')->toString(),
+            'role' => $request->validated('role'),
         ]);
 
         $member = $workspace->users()
@@ -82,24 +79,25 @@ class WorkspaceMemberController extends Controller
     ): JsonResponse {
         Gate::authorize('manageMembers', $workspace);
 
-        $member = $workspace->users()
-            ->withPivot('role')
+        $memberRole = $workspace->users()
             ->whereKey($user->id)
-            ->firstOrFail();
+            ->value('user_workspace.role');
 
-        if ($member->pivot->role === WorkspaceRole::Owner->value) {
+        abort_if($memberRole === null, 404);
+
+        if ($memberRole === WorkspaceRole::Owner->value) {
             abort(422, 'Workspace owner cannot be removed.');
         }
 
         if (
             $workspace->hasRole($request->user(), WorkspaceRole::Admin)
-            && $member->pivot->role !== WorkspaceRole::Member->value
+            && $memberRole !== WorkspaceRole::Member->value
         ) {
             abort(403);
         }
 
         $removeWorkspaceMember->handle($workspace, $user);
 
-        return response()->json(null, 204);
+        return response()->json(status: 204);
     }
 }

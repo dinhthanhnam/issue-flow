@@ -3,11 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\CreateWorkspace;
-use App\Http\Requests\CreateWorkspaceRequest;
 use App\Http\Requests\StoreWorkspaceRequest;
 use App\Http\Requests\UpdateWorkspaceRequest;
 use App\Http\Resources\WorkspaceResource;
-use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,16 +24,6 @@ class WorkspaceController extends Controller
         return WorkspaceResource::collection($workspaces)->response();
     }
 
-    public function create(CreateWorkspaceRequest $request): JsonResponse
-    {
-        $data = $request->validated();
-        $workspace = Workspace::create($data);
-
-        return new WorkspaceResource($workspace)
-            ->response()
-            ->setStatusCode(201);
-    }
-
     public function store(
         StoreWorkspaceRequest $request,
         CreateWorkspace $createWorkspace,
@@ -51,7 +39,7 @@ class WorkspaceController extends Controller
             ->setStatusCode(201);
     }
 
-    public function show(Request $request, Workspace $workspace): JsonResponse
+    public function show(Workspace $workspace): JsonResponse
     {
         Gate::authorize('view', $workspace);
 
@@ -61,16 +49,10 @@ class WorkspaceController extends Controller
     public function update(
         UpdateWorkspaceRequest $request,
         Workspace $workspace,
-        User $user,
     ): JsonResponse {
         $workspace->update($request->validated());
 
         return new WorkspaceResource($workspace)->response();
-    }
-
-    public function destroy(Workspace $workspace)
-    {
-        //
     }
 
     public function archive(Workspace $workspace): JsonResponse

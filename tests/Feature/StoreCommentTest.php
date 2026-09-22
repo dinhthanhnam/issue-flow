@@ -29,7 +29,7 @@ test('a workspace member can comment on an issue', function () {
         ->postJson(route('issues.comments.store', $issue), [
             'body' => 'I am working on this issue.',
         ])
-        ->assertSuccessful()
+        ->assertCreated()
         ->assertJsonPath(
             'data.body',
             'I am working on this issue.',

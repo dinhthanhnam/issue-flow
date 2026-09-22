@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\Api\ProjectMemberController;
-use App\Http\Controllers\Api\WorkspaceMemberController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\IssueLabelController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
