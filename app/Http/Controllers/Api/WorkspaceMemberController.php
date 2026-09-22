@@ -10,6 +10,7 @@ use App\Http\Resources\WorkspaceMemberResource;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
@@ -73,6 +74,7 @@ class WorkspaceMemberController extends Controller
     }
 
     public function destroy(
+        Request $request,
         Workspace $workspace,
         User $user,
     ): JsonResponse {
@@ -85,6 +87,13 @@ class WorkspaceMemberController extends Controller
 
         if ($member->pivot->role === WorkspaceRole::Owner->value) {
             abort(422, 'Workspace owner cannot be removed.');
+        }
+
+        if (
+            $workspace->hasRole($request->user(), WorkspaceRole::Admin)
+            && $member->pivot->role !== WorkspaceRole::Member->value
+        ) {
+            abort(403);
         }
 
         $workspace->users()->detach($user->id);

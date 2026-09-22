@@ -27,6 +27,9 @@ class StoreWorkspaceMemberRequest extends FormRequest
     public function rules(): array
     {
         $workspace = $this->route('workspace');
+        $allowedRoles = $workspace->hasRole($this->user(), WorkspaceRole::Owner)
+            ? [WorkspaceRole::Admin, WorkspaceRole::Member]
+            : [WorkspaceRole::Member];
 
         return [
             'user_id' => [
@@ -38,10 +41,7 @@ class StoreWorkspaceMemberRequest extends FormRequest
             ],
             'role' => [
                 'required',
-                Rule::in([
-                    WorkspaceRole::Admin->value,
-                    WorkspaceRole::Member->value,
-                ]),
+                Rule::enum(WorkspaceRole::class)->only($allowedRoles),
             ],
         ];
     }

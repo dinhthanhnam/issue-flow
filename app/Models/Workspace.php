@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\WorkspaceRole;
 use Database\Factories\WorkspaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -36,6 +37,11 @@ class Workspace extends Model
         return $this->hasMany(Project::class);
     }
 
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
+
     #[Scope]
     public function archived_at(Builder $query): void
     {
@@ -44,8 +50,28 @@ class Workspace extends Model
 
     public function hasMember(User $user): bool
     {
-        return $this->users()
+        return $this->roleFor($user) !== null;
+    }
+
+    public function hasRole(User $user, WorkspaceRole $role): bool
+    {
+        return $this->roleFor($user) === $role;
+    }
+
+    /**
+     * @param  array<int, WorkspaceRole>  $roles
+     */
+    public function hasAnyRole(User $user, array $roles): bool
+    {
+        return in_array($this->roleFor($user), $roles, true);
+    }
+
+    public function roleFor(User $user): ?WorkspaceRole
+    {
+        $role = $this->users()
             ->whereKey($user->id)
-            ->exists();
+            ->value('user_workspace.role');
+
+        return $role === null ? null : WorkspaceRole::from($role);
     }
 }

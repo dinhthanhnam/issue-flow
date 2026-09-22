@@ -16,9 +16,6 @@ use Illuminate\Support\Facades\Gate;
 
 class WorkspaceController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request): JsonResponse
     {
         $workspaces = $request->user()
@@ -30,9 +27,6 @@ class WorkspaceController extends Controller
         return WorkspaceResource::collection($workspaces)->response();
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create(CreateWorkspaceRequest $request): JsonResponse
     {
         $data = $request->validated();
@@ -43,9 +37,6 @@ class WorkspaceController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(
         StoreWorkspaceRequest $request
     ): JsonResponse {
@@ -64,9 +55,6 @@ class WorkspaceController extends Controller
             ->setStatusCode(201);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Request $request, Workspace $workspace): JsonResponse
     {
         Gate::authorize('view', $workspace);
@@ -74,17 +62,6 @@ class WorkspaceController extends Controller
         return new WorkspaceResource($workspace)->response();
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Workspace $workspace)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(
         UpdateWorkspaceRequest $request,
         Workspace $workspace,
@@ -95,9 +72,6 @@ class WorkspaceController extends Controller
         return new WorkspaceResource($workspace)->response();
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Workspace $workspace)
     {
         //

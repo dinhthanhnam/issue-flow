@@ -31,6 +31,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
+/**
+ * @property array<Workspace> $workspaces
+ * @property array<Issue> $reportedIssues
+ * @property array<Issue> $assignedIssues
+ * @property array<Comment> $comments
+ */
 class User extends Authenticatable implements PasskeyUser
 {
     /** @use HasFactory<UserFactory> */

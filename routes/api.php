@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\WorkspaceMemberController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -32,30 +33,41 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('workspaces.restore');
 
     // Workspace members api routes
-    Route::get('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'index'])
+    Route::get('workspaces/{workspace}/members', [WorkspaceMemberController::class, 'index'])
         ->name('workspaces.members.index');
-    Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])
+    Route::post('workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])
         ->name('workspaces.members.store');
-    Route::patch('/workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'update'])
+    Route::patch('workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'update'])
         ->name('workspaces.members.update');
-    Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])
+    Route::delete('workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])
         ->name('workspaces.members.destroy');
+    // Project api routes
+    Route::get('projects/{project}', [ProjectController::class, 'show'])
+        ->name('projects.show');
+    Route::patch('projects/{project}', [ProjectController::class, 'update'])
+        ->name('projects.update');
+    Route::get('workspaces/{workspace}/projects', [ProjectController::class, 'index'])
+        ->name('workspaces.projects.index');
+    Route::post('workspaces/{workspace}/projects', [ProjectController::class, 'store'])
+        ->name('workspaces.projects.store');
+    //    Route::delete('/workspaces/{workspace}/projects/{project}', [ProjectController::class, 'destroy'])
+    //        ->name('workspaces.projects.destroy');
 
     // Issues routes
-    Route::get('/projects/{project}/issues', [IssueController::class, 'index'])
+    Route::get('projects/{project}/issues', [IssueController::class, 'index'])
         ->name('projects.issues.index');
 
-    Route::post('/projects/{project}/issues', [IssueController::class, 'store'])
+    Route::post('projects/{project}/issues', [IssueController::class, 'store'])
         ->middleware(['project.workspace.active'])
         ->name('projects.issues.store');
 
-    Route::patch('/issues/{issue}', [IssueController::class, 'update'])
+    Route::patch('issues/{issue}', [IssueController::class, 'update'])
         ->name('issues.update');
 
     // Comments routes
-    Route::get('/issues/{issue}/comments', [CommentController::class, 'index'])
+    Route::get('issues/{issue}/comments', [CommentController::class, 'index'])
         ->name('issues.comments.index');
 
-    Route::post('/issues/{issue}/comments', [CommentController::class, 'store'])
+    Route::post('issues/{issue}/comments', [CommentController::class, 'store'])
         ->name('issues.comments.store');
 });

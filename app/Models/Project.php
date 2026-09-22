@@ -8,10 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property Workspace $workspace
+ * @property array<Issue> $issues@W
+ */
 #[Fillable(['workspace_id', 'name', 'key', 'description'])]
 class Project extends Model
 {
     use HasFactory;
+
     //
     public function workspace(): BelongsTo
     {

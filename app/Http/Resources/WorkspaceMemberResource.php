@@ -23,6 +23,7 @@ class WorkspaceMemberResource extends JsonResource
                 'user_workspace',
                 fn () => $this->pivot->role
             ),
+            'created_at' => $this->created_at,
         ];
     }
 }

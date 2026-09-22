@@ -15,8 +15,17 @@ class UpdateWorkspaceMemberRequest extends FormRequest
     public function authorize(): bool
     {
         $workspace = $this->route('workspace');
+        $targetUser = $this->route('user');
 
-        return $this->user()->can('manageMembers', $workspace);
+        if (! $this->user()->can('manageMembers', $workspace)) {
+            return false;
+        }
+
+        if ($workspace->hasRole($this->user(), WorkspaceRole::Owner)) {
+            return true;
+        }
+
+        return $workspace->hasRole($targetUser, WorkspaceRole::Member);
     }
 
     /**
@@ -26,13 +35,15 @@ class UpdateWorkspaceMemberRequest extends FormRequest
      */
     public function rules(): array
     {
+        $workspace = $this->route('workspace');
+        $allowedRoles = $workspace->hasRole($this->user(), WorkspaceRole::Owner)
+            ? [WorkspaceRole::Admin, WorkspaceRole::Member]
+            : [WorkspaceRole::Member];
+
         return [
             'role' => [
                 'required',
-                Rule::in([
-                    WorkspaceRole::Admin->value,
-                    WorkspaceRole::Member->value,
-                ]),
+                Rule::enum(WorkspaceRole::class)->only($allowedRoles),
             ],
         ];
     }
