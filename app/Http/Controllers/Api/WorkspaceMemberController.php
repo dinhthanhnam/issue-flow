@@ -23,7 +23,7 @@ class WorkspaceMemberController extends Controller
             ->withPivot('role')
             ->get();
 
-        return response()->json(WorkspaceMemberResource::collection($members));
+        return WorkspaceMemberResource::collection($members)->response();
     }
 
     public function store(
@@ -42,10 +42,9 @@ class WorkspaceMemberController extends Controller
             ->withPivot('role')
             ->findOrFail($userId);
 
-        return response()->json(
-            new WorkspaceMemberResource($member),
-            201
-        );
+        return new WorkspaceMemberResource($member)
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function update(
@@ -70,7 +69,7 @@ class WorkspaceMemberController extends Controller
             ->withPivot('role')
             ->findOrFail($user->id);
 
-        return response()->json(new WorkspaceMemberResource($member));
+        return new WorkspaceMemberResource($member)->response();
     }
 
     public function destroy(

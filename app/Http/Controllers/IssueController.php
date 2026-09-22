@@ -14,12 +14,12 @@ use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Gate;
 
 class IssueController extends Controller
 {
-    public function index(IndexIssueRequest $request, Project $project): AnonymousResourceCollection
+    public function index(IndexIssueRequest $request, Project $project): JsonResponse
     {
         Gate::authorize('viewIssues', $project);
 
@@ -38,14 +38,14 @@ class IssueController extends Controller
             ->latest()
             ->paginate(20);
 
-        return IssueResource::collection($issues);
+        return IssueResource::collection($issues)->response();
     }
 
     public function store(
         StoreIssueRequest $request,
         Project $project,
         CreateIssue $createIssue,
-    ): IssueResource {
+    ): JsonResponse {
         $data = $request->validated();
 
         $issue = $createIssue->handle(
@@ -59,14 +59,16 @@ class IssueController extends Controller
 
         $issue->load(['project', 'reporter', 'assignee']);
 
-        return new IssueResource($issue);
+        return new IssueResource($issue)
+            ->response()
+            ->setStatusCode(201);
     }
 
     public function update(
         UpdateIssueRequest $request,
         Issue $issue,
         UpdateIssue $updateIssue,
-    ): IssueResource {
+    ): JsonResponse {
         $issue = $updateIssue->handle(
             issue: $issue,
             user: $request->user(),
@@ -75,6 +77,6 @@ class IssueController extends Controller
 
         $issue->load(['project', 'reporter', 'assignee']);
 
-        return new IssueResource($issue);
+        return new IssueResource($issue)->response();
     }
 }
