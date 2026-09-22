@@ -2,6 +2,8 @@
 
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
+use App\Enums\ProjectRole;
+use App\Enums\WorkspaceRole;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
@@ -18,6 +20,7 @@ test('a workspace member can update an issue', function () {
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
 
     $issue = Issue::factory()->create([
         'project_id' => $project->id,
@@ -47,11 +50,14 @@ test('updating an issue records activity', function () {
     $user = User::factory()->create();
 
     $workspace = Workspace::factory()->create();
-    $workspace->users()->attach($user);
+    $workspace->users()->attach($user, [
+        'role' => WorkspaceRole::Member->value,
+    ]);
 
     $project = Project::factory()
         ->for($workspace)
         ->create();
+    $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
 
     $issue = Issue::factory()
         ->for($project)
@@ -82,4 +88,27 @@ test('updating an issue records activity', function () {
         'status' => 'in_progress',
         'priority' => 'high',
     ]);
+});
+
+test('a project viewer cannot update an issue', function () {
+    $viewer = User::factory()->create();
+    $reporter = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->users()->attach([$viewer->id, $reporter->id], [
+        'role' => WorkspaceRole::Member->value,
+    ]);
+    $project = Project::factory()->for($workspace)->create();
+    $project->users()->attach($viewer, ['role' => ProjectRole::Viewer->value]);
+    $issue = Issue::factory()->for($project)->create([
+        'reporter_id' => $reporter->id,
+        'status' => IssueStatus::Todo,
+    ]);
+
+    $this->actingAs($viewer)
+        ->patchJson(route('issues.update', $issue), [
+            'status' => IssueStatus::Done->value,
+        ])
+        ->assertForbidden();
+
+    expect($issue->refresh()->status)->toBe(IssueStatus::Todo);
 });

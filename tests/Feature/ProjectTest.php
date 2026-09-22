@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ProjectRole;
 use App\Enums\WorkspaceRole;
 use App\Models\Project;
 use App\Models\User;
@@ -19,7 +20,11 @@ test('a workspace member can list only projects in that workspace', function () 
     ]);
 
     $project = Project::factory()->for($workspace)->create();
+    $unassignedProject = Project::factory()->for($workspace)->create();
     $otherProject = Project::factory()->for($otherWorkspace)->create();
+    $project->users()->attach($user, [
+        'role' => ProjectRole::Member->value,
+    ]);
 
     actingAs($user)
         ->getJson(route('workspaces.projects.index', $workspace))
@@ -27,6 +32,9 @@ test('a workspace member can list only projects in that workspace', function () 
         ->assertJsonCount(1, 'data')
         ->assertJsonFragment([
             'id' => $project->id,
+        ])
+        ->assertJsonMissing([
+            'id' => $unassignedProject->id,
         ])
         ->assertJsonMissing([
             'id' => $otherProject->id,
@@ -49,6 +57,9 @@ test('a workspace member can view a project', function () {
 
     $workspace->users()->attach($user, [
         'role' => WorkspaceRole::Member->value,
+    ]);
+    $project->users()->attach($user, [
+        'role' => ProjectRole::Viewer->value,
     ]);
 
     actingAs($user)
@@ -99,6 +110,17 @@ test('an owner or admin can create a project with an uppercase key', function (W
         'name' => 'Backend Platform',
         'key' => 'BACK',
         'description' => 'Backend work',
+    ]);
+
+    $project = Project::query()
+        ->whereBelongsTo($workspace)
+        ->where('key', 'BACK')
+        ->sole();
+
+    assertDatabaseHas('project_user', [
+        'project_id' => $project->id,
+        'user_id' => $user->id,
+        'role' => ProjectRole::Lead->value,
     ]);
 })->with([
     'owner' => WorkspaceRole::Owner,
@@ -208,6 +230,9 @@ test('a member cannot update a project', function () {
     $project = Project::factory()->for($workspace)->create([
         'name' => 'Original Project',
     ]);
+    $project->users()->attach($user, [
+        'role' => ProjectRole::Member->value,
+    ]);
 
     actingAs($user)
         ->patchJson(route('projects.update', $project), [
@@ -216,6 +241,29 @@ test('a member cannot update a project', function () {
         ->assertForbidden();
 
     expect($project->refresh()->name)->toBe('Original Project');
+});
+
+test('a project lead can update their project', function () {
+    $user = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->users()->attach($user, [
+        'role' => WorkspaceRole::Member->value,
+    ]);
+    $project = Project::factory()->for($workspace)->create([
+        'name' => 'Original Project',
+    ]);
+    $project->users()->attach($user, [
+        'role' => ProjectRole::Lead->value,
+    ]);
+
+    actingAs($user)
+        ->patchJson(route('projects.update', $project), [
+            'name' => 'Lead Updated Project',
+        ])
+        ->assertOk()
+        ->assertJsonPath('data.name', 'Lead Updated Project');
+
+    expect($project->refresh()->name)->toBe('Lead Updated Project');
 });
 
 test('a project cannot be moved to another workspace through update', function () {

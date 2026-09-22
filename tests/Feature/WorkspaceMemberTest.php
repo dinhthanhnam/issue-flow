@@ -1,6 +1,8 @@
 <?php
 
+use App\Enums\ProjectRole;
 use App\Enums\WorkspaceRole;
+use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
 
@@ -93,12 +95,20 @@ test('an owner can remove a workspace member', function () {
     $owner = User::factory()->create();
     $member = User::factory()->create();
     $workspace = Workspace::factory()->create();
+    $otherWorkspace = Workspace::factory()->create();
     $workspace->users()->attach($owner, [
         'role' => WorkspaceRole::Owner->value,
     ]);
     $workspace->users()->attach($member, [
         'role' => WorkspaceRole::Member->value,
     ]);
+    $otherWorkspace->users()->attach($member, [
+        'role' => WorkspaceRole::Member->value,
+    ]);
+    $project = Project::factory()->for($workspace)->create();
+    $otherProject = Project::factory()->for($otherWorkspace)->create();
+    $project->users()->attach($member, ['role' => ProjectRole::Member->value]);
+    $otherProject->users()->attach($member, ['role' => ProjectRole::Member->value]);
 
     actingAs($owner)
         ->deleteJson(route('workspaces.members.destroy', [$workspace, $member]))
@@ -107,6 +117,15 @@ test('an owner can remove a workspace member', function () {
     assertDatabaseMissing('user_workspace', [
         'workspace_id' => $workspace->id,
         'user_id' => $member->id,
+    ]);
+    assertDatabaseMissing('project_user', [
+        'project_id' => $project->id,
+        'user_id' => $member->id,
+    ]);
+    assertDatabaseHas('project_user', [
+        'project_id' => $otherProject->id,
+        'user_id' => $member->id,
+        'role' => ProjectRole::Member->value,
     ]);
 });
 

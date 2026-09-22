@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\ProjectMemberController;
 use App\Http\Controllers\Api\WorkspaceMemberController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\IssueController;
@@ -50,8 +51,16 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('workspaces.projects.index');
     Route::post('workspaces/{workspace}/projects', [ProjectController::class, 'store'])
         ->name('workspaces.projects.store');
-    //    Route::delete('/workspaces/{workspace}/projects/{project}', [ProjectController::class, 'destroy'])
-    //        ->name('workspaces.projects.destroy');
+
+    // Project members api routes
+    Route::get('projects/{project}/members', [ProjectMemberController::class, 'index'])
+        ->name('projects.members.index');
+    Route::post('projects/{project}/members', [ProjectMemberController::class, 'store'])
+        ->name('projects.members.store');
+    Route::patch('projects/{project}/members/{user}', [ProjectMemberController::class, 'update'])
+        ->name('projects.members.update');
+    Route::delete('projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy'])
+        ->name('projects.members.destroy');
 
     // Issues routes
     Route::get('projects/{project}/issues', [IssueController::class, 'index'])

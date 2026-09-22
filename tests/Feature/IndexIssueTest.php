@@ -1,6 +1,8 @@
 <?php
 
 use App\Enums\IssueStatus;
+use App\Enums\ProjectRole;
+use App\Enums\WorkspaceRole;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
@@ -10,11 +12,14 @@ test('issues can be filtered by status', function () {
     $user = User::factory()->create();
     $workspace = Workspace::factory()->create();
 
-    $workspace->users()->attach($user);
+    $workspace->users()->attach($user, [
+        'role' => WorkspaceRole::Member->value,
+    ]);
 
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Viewer->value]);
 
     Issue::factory()->create([
         'project_id' => $project->id,

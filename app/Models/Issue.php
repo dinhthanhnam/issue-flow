@@ -28,6 +28,7 @@ class Issue extends Model
         ];
     }
 
+    /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
@@ -38,6 +39,7 @@ class Issue extends Model
         return $this->hasMany(Comment::class);
     }
 
+    /** @return BelongsToMany<Label, $this> */
     public function labels(): BelongsToMany
     {
         return $this->belongsToMany(Label::class);

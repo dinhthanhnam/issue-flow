@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ProjectRole;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
@@ -18,6 +19,7 @@ test('issue can be created when workspace is active', function () {
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
 
     $this
         ->actingAs($user)
@@ -46,6 +48,7 @@ test('issue cannot be created when workspace is archived', function () {
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
 
     $this
         ->actingAs($user)

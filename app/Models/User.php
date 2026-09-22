@@ -63,6 +63,14 @@ class User extends Authenticatable implements PasskeyUser
             ->withTimestamps();
     }
 
+    /** @return BelongsToMany<Project, $this> */
+    public function projects(): BelongsToMany
+    {
+        return $this->belongsToMany(Project::class)
+            ->withPivot('role')
+            ->withTimestamps();
+    }
+
     public function reportedIssues(): HasMany
     {
         return $this->hasMany(Issue::class, 'reporter_id');

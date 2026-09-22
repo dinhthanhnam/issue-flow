@@ -32,11 +32,13 @@ class Workspace extends Model
             ->withTimestamps();
     }
 
+    /** @return HasMany<Project, $this> */
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
     }
 
+    /** @return HasMany<Label, $this> */
     public function labels(): HasMany
     {
         return $this->hasMany(Label::class);

@@ -13,6 +13,7 @@ class StoreCommentRequest extends FormRequest
     public function authorize(): bool
     {
         $issue = $this->route('issue');
+
         return $this->user()->can('comment', $issue);
     }
 
@@ -24,7 +25,7 @@ class StoreCommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'body' => 'required|string|max:1000',
+            'body' => ['required', 'string', 'max:1000'],
         ];
     }
 }

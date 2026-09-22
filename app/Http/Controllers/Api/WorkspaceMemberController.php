@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
@@ -96,7 +97,14 @@ class WorkspaceMemberController extends Controller
             abort(403);
         }
 
-        $workspace->users()->detach($user->id);
+        DB::transaction(function () use ($workspace, $user): void {
+            DB::table('project_user')
+                ->where('user_id', $user->id)
+                ->whereIn('project_id', $workspace->projects()->select('id'))
+                ->delete();
+
+            $workspace->users()->detach($user->id);
+        });
 
         return response()->json(null, 204);
     }

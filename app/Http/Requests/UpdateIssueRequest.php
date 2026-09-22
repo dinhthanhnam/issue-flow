@@ -4,8 +4,10 @@ namespace App\Http\Requests;
 
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
+use App\Enums\ProjectRole;
 use App\Models\Issue;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -46,6 +48,13 @@ class UpdateIssueRequest extends FormRequest
                         'workspace_id',
                         $issue->project->workspace_id,
                     ),
+                Rule::exists('project_user', 'user_id')
+                    ->where(fn (Builder $query) => $query
+                        ->where('project_id', $issue->project_id)
+                        ->whereIn('role', [
+                            ProjectRole::Lead->value,
+                            ProjectRole::Member->value,
+                        ])),
             ],
         ];
     }

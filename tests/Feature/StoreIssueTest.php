@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\IssuePriority;
+use App\Enums\ProjectRole;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
@@ -12,13 +13,14 @@ test('A user can create an issue', function () {
     $workspace = Workspace::factory()->create();
 
     $workspace->users()->attach($user, [
-        'role' => 'owner'
+        'role' => 'owner',
     ]);
 
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
         'key' => 'TEST',
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Lead->value]);
 
     $response = $this
         ->actingAs($user)
@@ -100,6 +102,42 @@ test('a user outside the workspace cannot create an issue', function () {
     $this->assertDatabaseCount('issues', 0);
 });
 
+test('a project viewer cannot create an issue', function () {
+    $viewer = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->users()->attach($viewer, ['role' => 'member']);
+    $project = Project::factory()->for($workspace)->create();
+    $project->users()->attach($viewer, ['role' => ProjectRole::Viewer->value]);
+
+    $this->actingAs($viewer)
+        ->postJson(route('projects.issues.store', $project), [
+            'title' => 'Viewer cannot create this',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseCount('issues', 0);
+});
+
+test('an issue cannot be assigned to a project viewer', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->users()->attach($owner, ['role' => 'owner']);
+    $workspace->users()->attach($viewer, ['role' => 'member']);
+    $project = Project::factory()->for($workspace)->create();
+    $project->users()->attach($viewer, ['role' => ProjectRole::Viewer->value]);
+
+    $this->actingAs($owner)
+        ->postJson(route('projects.issues.store', $project), [
+            'title' => 'Invalid assignment',
+            'assignee_id' => $viewer->id,
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('assignee_id');
+
+    $this->assertDatabaseCount('issues', 0);
+});
+
 test('a workspace member can list project issues', function () {
     $user = User::factory()->create();
     $workspace = Workspace::factory()->create();
@@ -111,6 +149,7 @@ test('a workspace member can list project issues', function () {
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Viewer->value]);
 
     Issue::factory()
         ->count(3)

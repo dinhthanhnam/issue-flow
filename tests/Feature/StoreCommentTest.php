@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\ProjectRole;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
@@ -16,6 +17,7 @@ test('a workspace member can comment on an issue', function () {
     $project = Project::factory()->create([
         'workspace_id' => $workspace->id,
     ]);
+    $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
 
     $issue = Issue::factory()->create([
         'project_id' => $project->id,
@@ -67,5 +69,30 @@ test('a user outside the workspace cannot comment', function () {
     $this->assertDatabaseMissing('comments', [
         'issue_id' => $issue->id,
         'user_id' => $outsider->id,
+    ]);
+});
+
+test('a project viewer cannot comment on an issue', function () {
+    $viewer = User::factory()->create();
+    $reporter = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $workspace->users()->attach([$viewer->id, $reporter->id], [
+        'role' => 'member',
+    ]);
+    $project = Project::factory()->for($workspace)->create();
+    $project->users()->attach($viewer, ['role' => ProjectRole::Viewer->value]);
+    $issue = Issue::factory()->for($project)->create([
+        'reporter_id' => $reporter->id,
+    ]);
+
+    $this->actingAs($viewer)
+        ->postJson(route('issues.comments.store', $issue), [
+            'body' => 'Viewer comment',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('comments', [
+        'issue_id' => $issue->id,
+        'user_id' => $viewer->id,
     ]);
 });
