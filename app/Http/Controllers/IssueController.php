@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Issues\CreateIssue;
-use App\Actions\Issues\UpdateIssue;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
 use App\Http\Requests\IndexIssueRequest;
@@ -90,13 +89,8 @@ class IssueController extends Controller
     public function update(
         UpdateIssueRequest $request,
         Issue $issue,
-        UpdateIssue $updateIssue,
     ): JsonResponse {
-        $issue = $updateIssue->handle(
-            issue: $issue,
-            user: $request->user(),
-            data: $request->validated(),
-        );
+        $issue->update($request->validated());
 
         $issue->load(['project', 'reporter', 'assignee', 'labels']);
 

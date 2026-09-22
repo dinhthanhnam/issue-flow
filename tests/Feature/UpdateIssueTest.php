@@ -8,6 +8,8 @@ use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\IssueAssigned;
+use Illuminate\Support\Facades\Notification;
 
 test('a workspace member can update an issue', function () {
     $user = User::factory()->create();
@@ -29,6 +31,8 @@ test('a workspace member can update an issue', function () {
         'priority' => IssuePriority::Medium,
     ]);
 
+    Notification::fake();
+
     $this
         ->actingAs($user)
         ->patchJson(route('issues.update', $issue), [
@@ -44,13 +48,16 @@ test('a workspace member can update an issue', function () {
         'status' => 'in_progress',
         'priority' => 'high',
     ]);
+
+    Notification::assertNothingSent();
 });
 
-test('updating an issue records activity', function () {
+test('assigning an issue queues a notification for the assignee', function () {
     $user = User::factory()->create();
+    $assignee = User::factory()->create();
 
     $workspace = Workspace::factory()->create();
-    $workspace->users()->attach($user, [
+    $workspace->users()->attach([$user->id, $assignee->id], [
         'role' => WorkspaceRole::Member->value,
     ]);
 
@@ -58,36 +65,35 @@ test('updating an issue records activity', function () {
         ->for($workspace)
         ->create();
     $project->users()->attach($user, ['role' => ProjectRole::Member->value]);
+    $project->users()->attach($assignee, ['role' => ProjectRole::Member->value]);
 
     $issue = Issue::factory()
         ->for($project)
         ->create([
-            'status' => IssueStatus::Todo,
-            'priority' => IssuePriority::Medium,
+            'assignee_id' => null,
         ]);
 
+    Notification::fake();
+
     $this->actingAs($user)
-        ->patchJson("/api/issues/{$issue->id}", [
-            'status' => 'in_progress',
-            'priority' => 'high',
+        ->patchJson(route('issues.update', $issue), [
+            'assignee_id' => $assignee->id,
         ])
-        ->assertOk();
+        ->assertOk()
+        ->assertJsonPath('data.assignee.id', $assignee->id);
 
-    $this->assertDatabaseHas('issue_activities', [
-        'issue_id' => $issue->id,
-        'user_id' => $user->id,
-        'type' => 'issue_updated',
+    $this->assertDatabaseHas('issues', [
+        'id' => $issue->id,
+        'assignee_id' => $assignee->id,
     ]);
 
-    $activity = $issue->activities()->sole();
-
-    expect($activity->old_value)->toBe([
-        'status' => 'todo',
-        'priority' => 'medium',
-    ])->and($activity->new_value)->toBe([
-        'status' => 'in_progress',
-        'priority' => 'high',
-    ]);
+    Notification::assertSentTo(
+        $assignee,
+        function (IssueAssigned $notification, array $channels) use ($issue): bool {
+            return $notification->issue->is($issue)
+                && $channels === ['database'];
+        },
+    );
 });
 
 test('a project viewer cannot update an issue', function () {

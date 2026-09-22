@@ -4,10 +4,10 @@ namespace App\Notifications;
 
 use App\Models\Issue;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 
-class IssueAssigned extends Notification
+class IssueAssigned extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -16,7 +16,9 @@ class IssueAssigned extends Notification
      */
     public function __construct(
         public Issue $issue,
-    ) {}
+    ) {
+        $this->afterCommit();
+    }
 
     /**
      * Get the notification's delivery channels.
@@ -42,16 +44,4 @@ class IssueAssigned extends Notification
             'title' => $this->issue->title,
         ];
     }
-
-    //    /**
-    //     * Get the mail representation of the notification.
-    //     */
-    //    public function toMail(object $notifiable): MailMessage
-    //    {
-    //        return (new MailMessage)
-    //            ->line('The introduction to the notification.')
-    //            ->action('Notification Action', url('/'))
-    //            ->line('Thank you for using our application!');
-    //    }
-
 }

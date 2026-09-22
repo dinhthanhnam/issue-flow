@@ -46,12 +46,6 @@ class Issue extends Model
         return $this->belongsToMany(Label::class);
     }
 
-    /** @return HasMany<IssueActivity, $this> */
-    public function activities(): HasMany
-    {
-        return $this->hasMany(IssueActivity::class);
-    }
-
     /** @return BelongsTo<User, $this> */
     public function reporter(): BelongsTo
     {
