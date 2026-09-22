@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Actions\Issues\CreateIssue;
 use App\Enums\IssuePriority;
-use App\Enums\IssueStatus;
 use App\Http\Requests\IndexIssueRequest;
 use App\Http\Requests\StoreIssueRequest;
 use App\Http\Requests\UpdateIssueRequest;
@@ -12,48 +11,18 @@ use App\Http\Resources\IssueResource;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
+use App\Queries\Issues\IssueIndexQuery;
 use Illuminate\Http\JsonResponse;
 
 class IssueController extends Controller
 {
-    public function index(IndexIssueRequest $request, Project $project): JsonResponse
-    {
-        $data = $request->validated();
-
-        $query = $project->issues()
-            ->with(['project', 'reporter', 'assignee', 'labels']);
-
-        if (isset($data['status'])) {
-            $query->status(IssueStatus::from($data['status']));
-        }
-
-        if (isset($data['priority'])) {
-            $query->priority(IssuePriority::from($data['priority']));
-        }
-
-        if (isset($data['assignee_id'])) {
-            $query->assignedTo($data['assignee_id']);
-        }
-
-        if (isset($data['reporter_id'])) {
-            $query->reportedBy($data['reporter_id']);
-        }
-
-        if (isset($data['label_ids'])) {
-            $query->labeledWith($data['label_ids']);
-        }
-
-        if (isset($data['search'])) {
-            $query->search($data['search']);
-        }
-
-        $sortBy = $data['sort_by'] ?? 'created_at';
-        $sortDirection = $data['sort_direction'] ?? 'desc';
-
-        $issues = $query
-            ->orderBy($sortBy, $sortDirection)
-            ->orderBy('issues.id', $sortDirection)
-            ->paginate($data['per_page'] ?? 20)
+    public function index(
+        IndexIssueRequest $request,
+        Project $project,
+        IssueIndexQuery $issueIndexQuery,
+    ): JsonResponse {
+        $issues = $issueIndexQuery
+            ->paginate($project, $request->validated())
             ->withQueryString();
 
         return IssueResource::collection($issues)->response();
