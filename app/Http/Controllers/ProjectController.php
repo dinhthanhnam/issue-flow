@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Projects\CreateProject;
-use App\Enums\WorkspaceRole;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Workspace;
+use App\Queries\Projects\ProjectIndexQuery;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -17,24 +17,12 @@ class ProjectController extends Controller
 {
     public function index(
         Request $request,
-        Workspace $workspace
+        Workspace $workspace,
+        ProjectIndexQuery $projectIndexQuery,
     ): JsonResponse {
         Gate::authorize('viewAny', [Project::class, $workspace]);
 
-        $projects = $workspace->projects()
-            ->when(
-                ! $workspace->hasAnyRole($request->user(), [
-                    WorkspaceRole::Owner,
-                    WorkspaceRole::Admin,
-                ]),
-                fn ($query) => $query->whereHas(
-                    'users',
-                    fn ($users) => $users->whereKey($request->user()->id),
-                ),
-            )
-            ->latest('projects.created_at')
-            ->latest('projects.id')
-            ->get();
+        $projects = $projectIndexQuery->get($workspace, $request->user());
 
         return ProjectResource::collection($projects)->response();
     }

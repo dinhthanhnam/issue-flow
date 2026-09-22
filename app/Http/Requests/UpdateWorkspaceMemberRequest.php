@@ -3,9 +3,12 @@
 namespace App\Http\Requests;
 
 use App\Enums\WorkspaceRole;
+use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use LogicException;
 
 class UpdateWorkspaceMemberRequest extends FormRequest
 {
@@ -14,8 +17,8 @@ class UpdateWorkspaceMemberRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $workspace = $this->route('workspace');
-        $targetUser = $this->route('user');
+        $workspace = $this->workspace();
+        $targetUser = $this->targetUser();
 
         if (! $this->user()->can('manageMembers', $workspace)) {
             return false;
@@ -35,7 +38,8 @@ class UpdateWorkspaceMemberRequest extends FormRequest
      */
     public function rules(): array
     {
-        $workspace = $this->route('workspace');
+        $workspace = $this->workspace();
+        $targetUser = $this->targetUser();
         $allowedRoles = $workspace->hasRole($this->user(), WorkspaceRole::Owner)
             ? [WorkspaceRole::Admin, WorkspaceRole::Member]
             : [WorkspaceRole::Member];
@@ -43,8 +47,33 @@ class UpdateWorkspaceMemberRequest extends FormRequest
         return [
             'role' => [
                 'required',
+                Rule::prohibitedIf(
+                    $workspace->hasRole($targetUser, WorkspaceRole::Owner),
+                ),
                 Rule::enum(WorkspaceRole::class)->only($allowedRoles),
             ],
         ];
+    }
+
+    private function workspace(): Workspace
+    {
+        $workspace = $this->route('workspace');
+
+        if (! $workspace instanceof Workspace) {
+            throw new LogicException('The workspace route binding is missing.');
+        }
+
+        return $workspace;
+    }
+
+    private function targetUser(): User
+    {
+        $user = $this->route('user');
+
+        if (! $user instanceof User) {
+            throw new LogicException('The user route binding is missing.');
+        }
+
+        return $user;
     }
 }

@@ -3,14 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\RemoveWorkspaceMember;
-use App\Enums\WorkspaceRole;
 use App\Http\Requests\StoreWorkspaceMemberRequest;
 use App\Http\Requests\UpdateWorkspaceMemberRequest;
 use App\Http\Resources\WorkspaceMemberResource;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 
 class WorkspaceMemberController extends Controller
@@ -50,16 +48,6 @@ class WorkspaceMemberController extends Controller
         Workspace $workspace,
         User $user,
     ): JsonResponse {
-        $currentRole = $workspace->users()
-            ->whereKey($user->id)
-            ->value('user_workspace.role');
-
-        abort_if($currentRole === null, 404);
-
-        if ($currentRole === WorkspaceRole::Owner->value) {
-            abort(422, 'Owner role cannot be changed through this endpoint.');
-        }
-
         $workspace->users()->updateExistingPivot($user->id, [
             'role' => $request->validated('role'),
         ]);
@@ -72,29 +60,13 @@ class WorkspaceMemberController extends Controller
     }
 
     public function destroy(
-        Request $request,
         Workspace $workspace,
         User $user,
         RemoveWorkspaceMember $removeWorkspaceMember,
     ): JsonResponse {
-        Gate::authorize('manageMembers', $workspace);
+        abort_unless($workspace->hasMember($user), 404);
 
-        $memberRole = $workspace->users()
-            ->whereKey($user->id)
-            ->value('user_workspace.role');
-
-        abort_if($memberRole === null, 404);
-
-        if ($memberRole === WorkspaceRole::Owner->value) {
-            abort(422, 'Workspace owner cannot be removed.');
-        }
-
-        if (
-            $workspace->hasRole($request->user(), WorkspaceRole::Admin)
-            && $memberRole !== WorkspaceRole::Member->value
-        ) {
-            abort(403);
-        }
+        Gate::authorize('manageMember', [$workspace, $user]);
 
         $removeWorkspaceMember->handle($workspace, $user);
 

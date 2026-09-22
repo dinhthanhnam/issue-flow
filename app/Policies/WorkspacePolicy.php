@@ -39,6 +39,16 @@ class WorkspacePolicy
         );
     }
 
+    public function manageMember(User $user, Workspace $workspace, User $target): bool
+    {
+        if ($workspace->hasRole($user, WorkspaceRole::Owner)) {
+            return true;
+        }
+
+        return $workspace->hasRole($user, WorkspaceRole::Admin)
+            && $workspace->hasRole($target, WorkspaceRole::Member);
+    }
+
     public function delete(User $user, Workspace $workspace): bool
     {
         return false;
