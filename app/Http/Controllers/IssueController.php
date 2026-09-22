@@ -13,30 +13,49 @@ use App\Http\Resources\IssueResource;
 use App\Models\Issue;
 use App\Models\Project;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Gate;
 
 class IssueController extends Controller
 {
     public function index(IndexIssueRequest $request, Project $project): JsonResponse
     {
-        Gate::authorize('viewIssues', $project);
-
         $data = $request->validated();
 
-        $issues = $project->issues()
-            ->with(['project', 'reporter', 'assignee', 'labels'])
-            ->when(
-                isset($data['status']),
-                fn (Builder $query) => $query->status(IssueStatus::from($data['status'])),
-            )
-            ->when(
-                isset($data['assignee_id']),
-                fn (Builder $query) => $query->assignedTo($data['assignee_id']),
-            )
-            ->latest()
-            ->paginate(20);
+        $query = $project->issues()
+            ->with(['project', 'reporter', 'assignee', 'labels']);
+
+        if (isset($data['status'])) {
+            $query->status(IssueStatus::from($data['status']));
+        }
+
+        if (isset($data['priority'])) {
+            $query->priority(IssuePriority::from($data['priority']));
+        }
+
+        if (isset($data['assignee_id'])) {
+            $query->assignedTo($data['assignee_id']);
+        }
+
+        if (isset($data['reporter_id'])) {
+            $query->reportedBy($data['reporter_id']);
+        }
+
+        if (isset($data['label_ids'])) {
+            $query->labeledWith($data['label_ids']);
+        }
+
+        if (isset($data['search'])) {
+            $query->search($data['search']);
+        }
+
+        $sortBy = $data['sort_by'] ?? 'created_at';
+        $sortDirection = $data['sort_direction'] ?? 'desc';
+
+        $issues = $query
+            ->orderBy($sortBy, $sortDirection)
+            ->orderBy('issues.id', $sortDirection)
+            ->paginate($data['per_page'] ?? 20)
+            ->withQueryString();
 
         return IssueResource::collection($issues)->response();
     }
@@ -48,12 +67,16 @@ class IssueController extends Controller
     ): JsonResponse {
         $data = $request->validated();
 
+        $assignee = isset($data['assignee_id'])
+            ? User::query()->whereKey($data['assignee_id'])->firstOrFail()
+            : null;
+
         $issue = $createIssue->handle(
             project: $project,
             reporter: $request->user(),
             title: $data['title'],
             description: $data['description'] ?? null,
-            assignee: isset($data['assignee_id']) ? User::query()->findOrFail($data['assignee_id']) : null,
+            assignee: $assignee,
             priority: isset($data['priority']) ? IssuePriority::from($data['priority']) : IssuePriority::Medium,
         );
 

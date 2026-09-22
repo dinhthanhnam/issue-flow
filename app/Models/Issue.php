@@ -34,6 +34,7 @@ class Issue extends Model
         return $this->belongsTo(Project::class);
     }
 
+    /** @return HasMany<Comment, $this> */
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
@@ -45,30 +46,73 @@ class Issue extends Model
         return $this->belongsToMany(Label::class);
     }
 
+    /** @return HasMany<IssueActivity, $this> */
     public function activities(): HasMany
     {
         return $this->hasMany(IssueActivity::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function reporter(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reporter_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
     }
 
+    /** @param Builder<Issue> $query */
     #[Scope]
     protected function status(Builder $query, IssueStatus $status): void
     {
         $query->where('status', $status);
     }
 
+    /** @param Builder<Issue> $query */
     #[Scope]
     protected function assignedTo(Builder $query, int $userId): void
     {
         $query->where('assignee_id', $userId);
+    }
+
+    /** @param Builder<Issue> $query */
+    #[Scope]
+    protected function priority(Builder $query, IssuePriority $priority): void
+    {
+        $query->where('priority', $priority);
+    }
+
+    /** @param Builder<Issue> $query */
+    #[Scope]
+    protected function reportedBy(Builder $query, int $userId): void
+    {
+        $query->where('reporter_id', $userId);
+    }
+
+    /**
+     * @param  Builder<Issue>  $query
+     * @param  array<int, int>  $labelIds
+     */
+    #[Scope]
+    protected function labeledWith(Builder $query, array $labelIds): void
+    {
+        $query->whereHas(
+            'labels',
+            fn (Builder $labels) => $labels->whereKey($labelIds),
+        );
+    }
+
+    /** @param Builder<Issue> $query */
+    #[Scope]
+    protected function search(Builder $query, string $search): void
+    {
+        $query->where(function (Builder $query) use ($search): void {
+            $query
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+        });
     }
 }
