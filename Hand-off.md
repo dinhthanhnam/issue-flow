@@ -167,6 +167,55 @@ Route-bound User is the target user.
 BACKLOG
 ==================================================
 
+PENDING APPROVAL — BACKEND ARCHITECTURE NORMALIZATION
+
+Normalize controller and application-layer conventions before adding
+the Notification API or another backend domain.
+
+Controller convention:
+- keep all JSON domain controllers directly under
+  `App\Http\Controllers`; do not use a separate `Api` namespace
+- controllers coordinate HTTP input, an application operation, relation
+  loading, and an API Resource response
+- FormRequest handles validation and authorization for endpoints with
+  input; methods without a FormRequest use `Gate::authorize()`
+- return `JsonResponse` consistently from domain controllers
+- keep simple one-model CRUD and simple pivot attach/detach in controllers
+- move complex read composition to query scopes/query objects, not Actions
+
+Action convention:
+- place commands under `App\Actions\{Domain}` and expose `handle()`
+- create an Action when an operation has a transaction, concurrency lock,
+  multiple writes, reusable domain orchestration, or meaningful side effects
+- do not create Actions for trivial create/update/delete calls
+- immediate candidates: `CreateWorkspace`, `CreateProject`, `CreateIssue`,
+  and `RemoveWorkspaceMember`
+
+Issue activity cleanup:
+- remove the experimental `IssueActivity` model, factory, relationship,
+  migration/table, activity listener, and activity-only tests
+- remove `IssueUpdated` / `UpdateIssue` if no domain orchestration remains
+- keep audit history out until the product has concrete retention and query
+  requirements; later prefer a deliberate generic audit design instead of
+  recreating a narrowly scoped demo table
+
+Observer convention:
+- observers are only for secondary model lifecycle reactions such as an
+  assignee-change notification, cache invalidation, or search indexing
+- never hide core invariants, role assignment, numbering, or multi-write
+  workflows inside observers; those remain explicit Actions
+- when notification work resumes, replace the demo event/listener chain with
+  an `IssueObserver` for assignee changes and dispatch after commit
+
+Refactor cleanup:
+- move `ProjectMemberController` and `WorkspaceMemberController` out of `Api`
+- remove unused/dead controller methods and parameters
+- simplify the issue index with a dedicated query object or cohesive query
+  scope while keeping filters explicit and validated
+- update this hand-off and `BACKEND_OVERVIEW.md` after the refactor lands
+
+--------------------------------------------------
+
 PRIORITY 1 — FINISH WORKSPACE DOMAIN
 
 Complete and normalize WorkspaceController.
