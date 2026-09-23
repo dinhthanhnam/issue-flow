@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read Workspace $workspace
+ */
 #[Fillable(['workspace_id', 'name', 'key', 'description'])]
 class Project extends Model
 {

@@ -14,6 +14,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read Project $project
+ */
 #[Fillable(['project_id', 'reporter_id', 'assignee_id', 'number', 'title', 'description', 'status', 'priority'])]
 class Issue extends Model
 {

@@ -4,11 +4,16 @@ namespace App\Models;
 
 use Database\Factories\LabelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
+/**
+ * @property-read Workspace $workspace
+ * @property-read Collection<int, Issue> $issues
+ */
 #[Fillable(['workspace_id', 'name', 'color'])]
 class Label extends Model
 {
