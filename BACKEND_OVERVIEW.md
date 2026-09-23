@@ -8,12 +8,13 @@ This document is a reading map for the backend implemented through phase 5. The 
 2. Read the role and issue enums in [`app/Enums`](app/Enums): `WorkspaceRole`, `ProjectRole`, `IssueStatus`, and `IssuePriority`.
 3. Read [`app/Models/Workspace.php`](app/Models/Workspace.php), then [`app/Models/Project.php`](app/Models/Project.php). The helper methods on these two models define the effective access rules used by policies.
 4. Read the policies in [`app/Policies`](app/Policies), especially `ProjectPolicy` and `IssuePolicy`. Policies answer whether an operation is allowed; controllers do not duplicate that decision.
-5. Follow one request through `FormRequest -> Controller -> Action -> Resource`:
+5. Read [`app/Actions`](app/Actions) for transactional commands and [`app/Queries`](app/Queries) for complex list composition.
+6. Follow one request through `FormRequest -> Controller -> Action/Query -> Resource`:
    - Issue creation: `StoreIssueRequest -> IssueController::store -> CreateIssue -> IssueResource`.
-   - Issue update: `UpdateIssueRequest -> IssueController::update -> UpdateIssue -> IssueResource`.
-   - Issue listing: `IndexIssueRequest -> IssueController::index -> Issue scopes -> IssueResource`.
-6. Read [`app/Http/Middleware/EnsureWorkspaceIsActive.php`](app/Http/Middleware/EnsureWorkspaceIsActive.php). It resolves a workspace from a bound workspace, project, issue, or label and prevents mutations after archival.
-7. Finish with the feature tests in [`tests/Feature`](tests/Feature). They are the most direct executable description of the business rules.
+   - Issue update: `UpdateIssueRequest -> IssueController::update -> IssueObserver -> IssueResource`.
+   - Issue listing: `IndexIssueRequest -> IssueController::index -> IssueIndexQuery -> IssueResource`.
+7. Read [`app/Http/Middleware/EnsureWorkspaceIsActive.php`](app/Http/Middleware/EnsureWorkspaceIsActive.php). It resolves a workspace from a bound workspace, project, issue, or label and prevents mutations after archival.
+8. Finish with the feature tests in [`tests/Feature`](tests/Feature). They are the most direct executable description of the business rules.
 
 ## Data and ownership model
 
@@ -24,7 +25,6 @@ Workspace
 │   ├── project_user ── User     (lead | member | viewer)
 │   └── Issue
 │       ├── Comment
-│       ├── IssueActivity
 │       └── issue_label ── Label
 └── Label
 ```
@@ -55,12 +55,17 @@ Important implementation points:
 
 [`app/Actions/Issues/CreateIssue.php`](app/Actions/Issues/CreateIssue.php) locks the project while allocating the next project-local issue number. This prevents two concurrent creates from receiving the same number.
 
-[`app/Actions/Issues/UpdateIssue.php`](app/Actions/Issues/UpdateIssue.php) calculates changed fields and dispatches `IssueUpdated`. The listeners then:
-
-- record old and new values in `issue_activities`;
-- queue an assignment notification when `assignee_id` changes to a user.
+Simple issue updates remain in the controller. [`app/Observers/IssueObserver.php`](app/Observers/IssueObserver.php) reacts only when `assignee_id` changes and sends a queued database notification after commit. The observer does not own authorization or core issue invariants.
 
 Issue listing supports status, priority, assignee, reporter, workspace label, title/description search, allowlisted sorting, and bounded pagination. The nested project route is the project filter and tenant boundary.
+
+## Application-layer convention
+
+All JSON domain controllers live directly under `App\Http\Controllers` and return `JsonResponse`. A FormRequest owns authorization when an endpoint has validated input; endpoints without one authorize through Gate in the controller.
+
+Actions are command operations with transactions, locking, multiple writes, or meaningful orchestration. Simple one-model CRUD and pivot changes remain in controllers. Complex reads use query objects instead of Actions. Observers are reserved for secondary lifecycle reactions and must not hide core business rules.
+
+The current Actions are `CreateWorkspace`, `CreateProject`, `CreateIssue`, and `RemoveWorkspaceMember`. The current query objects are `ProjectIndexQuery` and `IssueIndexQuery`.
 
 ## Where behavior is proven
 
@@ -73,4 +78,4 @@ Run one area with `php artisan test --compact tests/Feature/IndexIssueTest.php`,
 
 ## Intentional stopping point
 
-The backend is complete through phase 5. The database notification writer already exists, but notification listing/read APIs are not implemented. React SPA, chat UI, chat API integration, and tool/function calling are also intentionally outside this phase and should be designed together next.
+The backend is complete through phase 5. The database notification writer already exists, but notification listing/read APIs are not implemented. Audit/activity history is intentionally deferred until concrete retention and query requirements exist. React SPA, chat UI, chat API integration, and tool/function calling are also intentionally outside this phase and should be designed together next.

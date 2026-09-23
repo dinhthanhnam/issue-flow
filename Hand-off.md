@@ -25,7 +25,6 @@ Existing domain:
 - Project
 - Issue
 - Comment
-- IssueActivity
 - Notifications
 
 Existing relationships:
@@ -38,7 +37,6 @@ Existing relationships:
 - Issue belongsTo reporter User
 - Issue optionally belongsTo assignee User
 - Issue hasMany Comment
-- Issue hasMany IssueActivity
 
 Existing issue functionality:
 - Create issue
@@ -48,11 +46,9 @@ Existing issue functionality:
 - Per-project issue number
 - Project row locking when generating issue number
 - Comments
-- Activity timeline
-- IssueUpdated event
-- Activity listener
 - Redis queue
-- Queued assignee notification
+- IssueObserver for assignee changes
+- Queued assignee notification dispatched after commit
 - Database notifications
 
 WorkspaceRole enum:
@@ -167,7 +163,7 @@ Route-bound User is the target user.
 BACKLOG
 ==================================================
 
-PENDING APPROVAL — BACKEND ARCHITECTURE NORMALIZATION
+COMPLETED — BACKEND ARCHITECTURE NORMALIZATION
 
 Normalize controller and application-layer conventions before adding
 the Notification API or another backend domain.
@@ -188,13 +184,13 @@ Action convention:
 - create an Action when an operation has a transaction, concurrency lock,
   multiple writes, reusable domain orchestration, or meaningful side effects
 - do not create Actions for trivial create/update/delete calls
-- immediate candidates: `CreateWorkspace`, `CreateProject`, `CreateIssue`,
-  and `RemoveWorkspaceMember`
+- current Actions: `CreateWorkspace`, `CreateProject`, `CreateIssue`, and
+  `RemoveWorkspaceMember`
 
 Issue activity cleanup:
-- remove the experimental `IssueActivity` model, factory, relationship,
-  migration/table, activity listener, and activity-only tests
-- remove `IssueUpdated` / `UpdateIssue` if no domain orchestration remains
+- the experimental `IssueActivity` model, factory, relationship, table,
+  activity listener, and activity-only tests have been removed
+- `IssueUpdated` and the trivial `UpdateIssue` Action have been removed
 - keep audit history out until the product has concrete retention and query
   requirements; later prefer a deliberate generic audit design instead of
   recreating a narrowly scoped demo table
@@ -204,15 +200,14 @@ Observer convention:
   assignee-change notification, cache invalidation, or search indexing
 - never hide core invariants, role assignment, numbering, or multi-write
   workflows inside observers; those remain explicit Actions
-- when notification work resumes, replace the demo event/listener chain with
-  an `IssueObserver` for assignee changes and dispatch after commit
+- assignee changes now use `IssueObserver`; `IssueAssigned` is queued after
+  commit
 
-Refactor cleanup:
-- move `ProjectMemberController` and `WorkspaceMemberController` out of `Api`
-- remove unused/dead controller methods and parameters
-- simplify the issue index with a dedicated query object or cohesive query
-  scope while keeping filters explicit and validated
-- update this hand-off and `BACKEND_OVERVIEW.md` after the refactor lands
+Refactor cleanup completed:
+- all JSON domain controllers now live directly under `App\Http\Controllers`
+- unused controller methods and parameters were removed
+- `IssueIndexQuery` and `ProjectIndexQuery` own complex read composition
+- domain controller methods consistently return `JsonResponse`
 
 --------------------------------------------------
 
@@ -528,8 +523,7 @@ Issues:
 - assignee validation
 - per-project numbering
 - comments
-- activity creation
-- notification dispatch
+- assignee notification dispatch
 
 Labels:
 - same-workspace constraint
@@ -576,7 +570,6 @@ Frontend features:
 - issue detail
 - create/edit issue
 - comments
-- activity timeline
 - labels
 - filters/search
 - notifications
@@ -620,7 +613,7 @@ README should contain:
 - deployment architecture
 - important design decisions
 - concurrency handling for issue numbering
-- queue/event/notification architecture
+- queue/observer/notification architecture
 
 --------------------------------------------------
 
