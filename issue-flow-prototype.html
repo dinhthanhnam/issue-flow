@@ -1,0 +1,1708 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>IssueFlow — Product prototype</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style type="text/tailwindcss">
+            @custom-variant dark (&:where(.dark, .dark *));
+
+            @theme {
+                --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+                --color-background: var(--background);
+                --color-foreground: var(--foreground);
+                --color-card: var(--card);
+                --color-card-foreground: var(--card-foreground);
+                --color-popover: var(--popover);
+                --color-popover-foreground: var(--popover-foreground);
+                --color-primary: var(--primary);
+                --color-primary-foreground: var(--primary-foreground);
+                --color-secondary: var(--secondary);
+                --color-secondary-foreground: var(--secondary-foreground);
+                --color-muted: var(--muted);
+                --color-muted-foreground: var(--muted-foreground);
+                --color-accent: var(--accent);
+                --color-accent-foreground: var(--accent-foreground);
+                --color-border: var(--border);
+                --color-input: var(--input);
+                --color-ring: var(--ring);
+                --color-sidebar: var(--sidebar);
+                --color-sidebar-foreground: var(--sidebar-foreground);
+                --color-sidebar-accent: var(--sidebar-accent);
+                --color-sidebar-border: var(--sidebar-border);
+            }
+
+            :root {
+                --background: oklch(1 0 0);
+                --foreground: oklch(0.145 0 0);
+                --card: oklch(1 0 0);
+                --card-foreground: oklch(0.145 0 0);
+                --popover: oklch(1 0 0);
+                --popover-foreground: oklch(0.145 0 0);
+                --primary: oklch(0.205 0 0);
+                --primary-foreground: oklch(0.985 0 0);
+                --secondary: oklch(0.97 0 0);
+                --secondary-foreground: oklch(0.205 0 0);
+                --muted: oklch(0.97 0 0);
+                --muted-foreground: oklch(0.556 0 0);
+                --accent: oklch(0.97 0 0);
+                --accent-foreground: oklch(0.205 0 0);
+                --border: oklch(0.922 0 0);
+                --input: oklch(0.922 0 0);
+                --ring: oklch(0.7 0 0);
+                --sidebar: oklch(0.985 0 0);
+                --sidebar-foreground: oklch(0.145 0 0);
+                --sidebar-accent: oklch(0.95 0 0);
+                --sidebar-border: oklch(0.922 0 0);
+            }
+
+            .dark {
+                --background: oklch(0.145 0 0);
+                --foreground: oklch(0.985 0 0);
+                --card: oklch(0.178 0 0);
+                --card-foreground: oklch(0.985 0 0);
+                --popover: oklch(0.178 0 0);
+                --popover-foreground: oklch(0.985 0 0);
+                --primary: oklch(0.985 0 0);
+                --primary-foreground: oklch(0.205 0 0);
+                --secondary: oklch(0.269 0 0);
+                --secondary-foreground: oklch(0.985 0 0);
+                --muted: oklch(0.235 0 0);
+                --muted-foreground: oklch(0.708 0 0);
+                --accent: oklch(0.269 0 0);
+                --accent-foreground: oklch(0.985 0 0);
+                --border: oklch(0.269 0 0);
+                --input: oklch(0.269 0 0);
+                --ring: oklch(0.439 0 0);
+                --sidebar: oklch(0.178 0 0);
+                --sidebar-foreground: oklch(0.985 0 0);
+                --sidebar-accent: oklch(0.235 0 0);
+                --sidebar-border: oklch(0.269 0 0);
+            }
+
+            * {
+                @apply border-border;
+            }
+            body {
+                @apply bg-background text-foreground antialiased;
+            }
+            button,
+            input,
+            textarea,
+            select {
+                @apply outline-none;
+            }
+            button:focus-visible,
+            input:focus-visible,
+            textarea:focus-visible,
+            select:focus-visible {
+                @apply ring-ring ring-offset-background ring-2 ring-offset-2;
+            }
+            .dragging {
+                @apply rotate-1 opacity-50;
+            }
+            .drop-target {
+                @apply bg-accent ring-ring/30 ring-2 ring-inset;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+                scrollbar-color: var(--border) transparent;
+            }
+        </style>
+    </head>
+    <body class="bg-background min-h-screen overflow-hidden text-sm">
+        <svg aria-hidden="true" class="hidden">
+            <symbol id="i-grid" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+            </symbol>
+            <symbol id="i-list" viewBox="0 0 24 24">
+                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+            </symbol>
+            <symbol id="i-search" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+            </symbol>
+            <symbol id="i-plus" viewBox="0 0 24 24">
+                <path d="M12 5v14M5 12h14" />
+            </symbol>
+            <symbol id="i-chevron" viewBox="0 0 24 24">
+                <path d="m9 18 6-6-6-6" />
+            </symbol>
+            <symbol id="i-chevrons" viewBox="0 0 24 24">
+                <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+            </symbol>
+            <symbol id="i-folder" viewBox="0 0 24 24">
+                <path
+                    d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"
+                />
+            </symbol>
+            <symbol id="i-users" viewBox="0 0 24 24">
+                <path
+                    d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"
+                />
+            </symbol>
+            <symbol id="i-settings" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                    d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.13.37.35.71.64.99.3.26.67.4 1.06.41h.09v4h-.09A1.7 1.7 0 0 0 19.4 15Z"
+                />
+            </symbol>
+            <symbol id="i-sparkles" viewBox="0 0 24 24">
+                <path
+                    d="m12 3-1.4 3.6L7 8l3.6 1.4L12 13l1.4-3.6L17 8l-3.6-1.4ZM5 14l-.8 2.2L2 17l2.2.8L5 20l.8-2.2L8 17l-2.2-.8ZM19 13l-1 2.5-2.5 1L18 17.5l1 2.5 1-2.5 2.5-1-2.5-1Z"
+                />
+            </symbol>
+            <symbol id="i-filter" viewBox="0 0 24 24">
+                <path d="M4 5h16M7 12h10M10 19h4" />
+            </symbol>
+            <symbol id="i-x" viewBox="0 0 24 24">
+                <path d="m6 6 12 12M18 6 6 18" />
+            </symbol>
+            <symbol id="i-menu" viewBox="0 0 24 24">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+            </symbol>
+            <symbol id="i-sun" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="4" />
+                <path
+                    d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"
+                />
+            </symbol>
+            <symbol id="i-send" viewBox="0 0 24 24">
+                <path d="m22 2-7 20-4-9-9-4Z" />
+                <path d="M22 2 11 13" />
+            </symbol>
+            <symbol id="i-message" viewBox="0 0 24 24">
+                <path
+                    d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"
+                />
+            </symbol>
+            <symbol id="i-dots" viewBox="0 0 24 24">
+                <circle cx="5" cy="12" r="1" />
+                <circle cx="12" cy="12" r="1" />
+                <circle cx="19" cy="12" r="1" />
+            </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24">
+                <path d="m5 12 4 4L19 6" />
+            </symbol>
+        </svg>
+
+        <div
+            id="app"
+            class="grid h-screen grid-cols-1 lg:grid-cols-[248px_minmax(0,1fr)]"
+        >
+            <aside
+                id="sidebar"
+                class="bg-sidebar text-sidebar-foreground fixed inset-y-0 left-0 z-40 flex w-[min(86vw,280px)] -translate-x-full flex-col border-r transition-transform duration-200 lg:static lg:w-auto lg:translate-x-0"
+            >
+                <div
+                    class="border-sidebar-border flex h-14 items-center gap-2 border-b px-4"
+                >
+                    <div
+                        class="bg-foreground text-background grid size-7 place-items-center rounded-md text-xs font-bold"
+                    >
+                        IF
+                    </div>
+                    <span class="font-semibold tracking-tight">IssueFlow</span>
+                    <button
+                        data-close-sidebar
+                        class="hover:bg-sidebar-accent ml-auto grid size-8 place-items-center rounded-md lg:hidden"
+                        aria-label="Close sidebar"
+                    >
+                        <svg class="size-4 fill-none stroke-current stroke-2">
+                            <use href="#i-x" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="border-sidebar-border relative border-b p-3">
+                    <button
+                        id="workspace-trigger"
+                        class="bg-background hover:bg-accent flex w-full items-center gap-3 rounded-lg border p-2 text-left shadow-xs"
+                        aria-expanded="false"
+                    >
+                        <span
+                            class="grid size-8 shrink-0 place-items-center rounded-md bg-zinc-900 text-xs font-semibold text-white dark:bg-zinc-100 dark:text-zinc-900"
+                            >AC</span
+                        >
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-medium"
+                                >Acme Studio</span
+                            >
+                            <span
+                                class="text-muted-foreground block truncate text-xs"
+                                >Workspace</span
+                            >
+                        </span>
+                        <svg
+                            class="text-muted-foreground size-4 fill-none stroke-current stroke-2"
+                        >
+                            <use href="#i-chevrons" />
+                        </svg>
+                    </button>
+                    <div
+                        id="workspace-menu"
+                        class="bg-popover text-popover-foreground absolute inset-x-3 top-[66px] z-50 hidden rounded-lg border p-1 shadow-lg"
+                    >
+                        <p
+                            class="text-muted-foreground px-2 py-1.5 text-xs font-medium"
+                        >
+                            Workspaces
+                        </p>
+                        <button
+                            class="bg-accent flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm"
+                        >
+                            <span
+                                class="grid size-6 place-items-center rounded bg-zinc-900 text-[10px] text-white dark:bg-zinc-100 dark:text-zinc-900"
+                                >AC</span
+                            >
+                            <span class="flex-1">Acme Studio</span>
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-check" />
+                            </svg>
+                        </button>
+                        <button
+                            class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm"
+                        >
+                            <span
+                                class="grid size-6 place-items-center rounded border text-[10px]"
+                                >PX</span
+                            >
+                            Personal experiments
+                        </button>
+                        <div class="my-1 border-t"></div>
+                        <button
+                            class="hover:bg-accent flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-plus" />
+                            </svg>
+                            New workspace
+                        </button>
+                    </div>
+                </div>
+
+                <nav class="flex-1 scrollbar-thin overflow-y-auto p-3">
+                    <div class="flex flex-col gap-1">
+                        <a
+                            href="#"
+                            class="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground flex h-9 items-center gap-3 rounded-md px-3"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-grid" />
+                            </svg>
+                            Overview
+                        </a>
+                        <a
+                            href="#"
+                            class="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground flex h-9 items-center gap-3 rounded-md px-3"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-users" />
+                            </svg>
+                            Members
+                        </a>
+                    </div>
+
+                    <div class="mt-6 flex items-center justify-between px-3">
+                        <span class="text-muted-foreground text-xs font-medium"
+                            >Projects</span
+                        >
+                        <button
+                            class="hover:bg-sidebar-accent grid size-6 place-items-center rounded"
+                            aria-label="New project"
+                        >
+                            <svg
+                                class="size-3.5 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-plus" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mt-2 flex flex-col gap-1">
+                        <a
+                            href="#"
+                            class="bg-sidebar-accent flex h-9 items-center gap-3 rounded-md px-3 font-medium"
+                        >
+                            <span
+                                class="size-2 rounded-full bg-zinc-900 dark:bg-zinc-100"
+                            ></span>
+                            <span class="min-w-0 flex-1 truncate"
+                                >Platform</span
+                            >
+                            <span class="text-muted-foreground text-xs"
+                                >PLT</span
+                            >
+                        </a>
+                        <a
+                            href="#"
+                            class="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground flex h-9 items-center gap-3 rounded-md px-3"
+                        >
+                            <span
+                                class="size-2 rounded-full bg-zinc-400"
+                            ></span>
+                            <span class="min-w-0 flex-1 truncate"
+                                >Mobile app</span
+                            >
+                            <span class="text-xs">MOB</span>
+                        </a>
+                        <a
+                            href="#"
+                            class="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground flex h-9 items-center gap-3 rounded-md px-3"
+                        >
+                            <span
+                                class="size-2 rounded-full bg-zinc-300 dark:bg-zinc-600"
+                            ></span>
+                            <span class="min-w-0 flex-1 truncate">Website</span>
+                            <span class="text-xs">WEB</span>
+                        </a>
+                    </div>
+                </nav>
+
+                <div class="border-sidebar-border border-t p-3">
+                    <a
+                        href="#"
+                        class="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground flex h-9 items-center gap-3 rounded-md px-3"
+                    >
+                        <svg class="size-4 fill-none stroke-current stroke-2">
+                            <use href="#i-settings" />
+                        </svg>
+                        Settings
+                    </a>
+                    <button
+                        class="hover:bg-sidebar-accent mt-1 flex w-full items-center gap-3 rounded-lg p-2 text-left"
+                    >
+                        <span
+                            class="grid size-8 place-items-center rounded-full bg-zinc-200 text-xs font-semibold dark:bg-zinc-700"
+                            >NT</span
+                        >
+                        <span class="min-w-0 flex-1">
+                            <span class="block truncate text-sm font-medium"
+                                >Nathan Tran</span
+                            >
+                            <span
+                                class="text-muted-foreground block truncate text-xs"
+                                >nathan@example.com</span
+                            >
+                        </span>
+                        <svg class="size-4 fill-current">
+                            <use href="#i-dots" />
+                        </svg>
+                    </button>
+                </div>
+            </aside>
+
+            <div
+                id="sidebar-overlay"
+                data-close-sidebar
+                class="fixed inset-0 z-30 hidden bg-black/40 lg:hidden"
+            ></div>
+
+            <main class="flex min-w-0 flex-col overflow-hidden">
+                <header
+                    class="flex h-14 shrink-0 items-center gap-2 border-b px-3 sm:px-5"
+                >
+                    <button
+                        id="open-sidebar"
+                        class="hover:bg-accent grid size-9 place-items-center rounded-md lg:hidden"
+                        aria-label="Open sidebar"
+                    >
+                        <svg class="size-4 fill-none stroke-current stroke-2">
+                            <use href="#i-menu" />
+                        </svg>
+                    </button>
+                    <div
+                        class="hidden min-w-0 items-center gap-2 text-sm sm:flex"
+                    >
+                        <span class="text-muted-foreground truncate"
+                            >Acme Studio</span
+                        >
+                        <svg
+                            class="text-muted-foreground size-3 fill-none stroke-current stroke-2"
+                        >
+                            <use href="#i-chevron" />
+                        </svg>
+                        <span class="truncate font-medium">Platform</span>
+                    </div>
+                    <div class="ml-auto flex items-center gap-1.5">
+                        <label class="relative hidden md:block">
+                            <svg
+                                class="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-search" />
+                            </svg>
+                            <input
+                                id="global-search"
+                                class="bg-background placeholder:text-muted-foreground h-9 w-56 rounded-md border pr-12 pl-9 text-sm"
+                                placeholder="Search issues..."
+                            />
+                            <kbd
+                                class="bg-muted text-muted-foreground absolute top-1/2 right-2 -translate-y-1/2 rounded border px-1.5 py-0.5 text-[10px]"
+                                >⌘ K</kbd
+                            >
+                        </label>
+                        <button
+                            id="theme-toggle"
+                            class="bg-background hover:bg-accent grid size-9 place-items-center rounded-md border shadow-xs"
+                            aria-label="Toggle theme"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-sun" />
+                            </svg>
+                        </button>
+                        <button
+                            data-open-chat
+                            class="bg-background hover:bg-accent inline-flex h-9 items-center gap-2 rounded-md border px-3 font-medium shadow-xs"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-sparkles" />
+                            </svg>
+                            <span class="hidden sm:inline">Ask AI</span>
+                        </button>
+                        <button
+                            data-open-create
+                            class="bg-primary text-primary-foreground inline-flex h-9 items-center gap-2 rounded-md px-3 font-medium shadow-xs hover:opacity-90"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-plus" />
+                            </svg>
+                            <span class="hidden sm:inline">New issue</span>
+                        </button>
+                    </div>
+                </header>
+
+                <section class="flex-1 scrollbar-thin overflow-auto">
+                    <div
+                        class="mx-auto flex min-h-full max-w-[1680px] flex-col px-4 py-5 sm:px-6 lg:px-8"
+                    >
+                        <div
+                            class="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between"
+                        >
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h1
+                                        class="text-xl font-semibold tracking-tight sm:text-2xl"
+                                    >
+                                        Platform issues
+                                    </h1>
+                                    <span
+                                        class="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs font-medium"
+                                        >18 open</span
+                                    >
+                                </div>
+                                <p class="text-muted-foreground mt-1 text-sm">
+                                    Plan and track work for the core platform.
+                                </p>
+                            </div>
+                            <div
+                                class="bg-muted inline-flex w-fit rounded-lg border p-1"
+                            >
+                                <button
+                                    data-view="board"
+                                    class="view-button bg-background inline-flex h-8 items-center gap-2 rounded-md px-3 text-xs font-medium shadow-xs"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-grid" />
+                                    </svg>
+                                    Board
+                                </button>
+                                <button
+                                    data-view="list"
+                                    class="view-button text-muted-foreground inline-flex h-8 items-center gap-2 rounded-md px-3 text-xs font-medium"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-list" />
+                                    </svg>
+                                    List
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-2 py-4">
+                            <label
+                                class="relative min-w-[220px] flex-1 sm:max-w-xs"
+                            >
+                                <svg
+                                    class="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2 fill-none stroke-current stroke-2"
+                                >
+                                    <use href="#i-search" />
+                                </svg>
+                                <input
+                                    id="issue-search"
+                                    class="bg-background placeholder:text-muted-foreground h-9 w-full rounded-md border pr-3 pl-9 text-sm"
+                                    placeholder="Filter this project..."
+                                />
+                            </label>
+                            <select
+                                id="status-filter"
+                                class="bg-background h-9 rounded-md border px-3 text-sm shadow-xs"
+                            >
+                                <option value="all">All statuses</option>
+                                <option value="backlog">Backlog</option>
+                                <option value="todo">Todo</option>
+                                <option value="progress">In progress</option>
+                                <option value="done">Done</option>
+                            </select>
+                            <button
+                                class="bg-background hover:bg-accent inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm shadow-xs"
+                            >
+                                <svg
+                                    class="size-4 fill-none stroke-current stroke-2"
+                                >
+                                    <use href="#i-filter" />
+                                </svg>
+                                More filters
+                            </button>
+                            <button
+                                id="clear-filter"
+                                class="text-muted-foreground hover:bg-accent hover:text-foreground hidden h-9 items-center rounded-md px-3 text-sm"
+                            >
+                                Clear
+                            </button>
+                            <div
+                                class="ml-auto hidden items-center -space-x-2 sm:flex"
+                            >
+                                <span
+                                    class="border-background grid size-7 place-items-center rounded-full border-2 bg-zinc-200 text-[10px] font-semibold dark:bg-zinc-700"
+                                    >NT</span
+                                >
+                                <span
+                                    class="border-background grid size-7 place-items-center rounded-full border-2 bg-zinc-300 text-[10px] font-semibold dark:bg-zinc-600"
+                                    >AL</span
+                                >
+                                <span
+                                    class="border-background grid size-7 place-items-center rounded-full border-2 bg-zinc-100 text-[10px] font-semibold dark:bg-zinc-800"
+                                    >+3</span
+                                >
+                            </div>
+                        </div>
+
+                        <div
+                            id="board-view"
+                            class="grid flex-1 auto-cols-[minmax(280px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-5 xl:grid-flow-row xl:grid-cols-4"
+                        >
+                            <section
+                                class="board-column bg-muted/65 flex min-h-[420px] flex-col rounded-xl"
+                                data-status="backlog"
+                            >
+                                <header
+                                    class="flex h-11 items-center gap-2 px-3"
+                                >
+                                    <span
+                                        class="size-2 rounded-full bg-zinc-400"
+                                    ></span>
+                                    <h2
+                                        class="text-xs font-semibold tracking-wide uppercase"
+                                    >
+                                        Backlog
+                                    </h2>
+                                    <span
+                                        class="column-count text-muted-foreground text-xs"
+                                        >3</span
+                                    >
+                                    <button
+                                        class="hover:bg-background ml-auto grid size-7 place-items-center rounded-md"
+                                        aria-label="Backlog menu"
+                                    >
+                                        <svg class="size-4 fill-current">
+                                            <use href="#i-dots" />
+                                        </svg>
+                                    </button>
+                                </header>
+                                <div
+                                    class="card-list flex flex-1 flex-col gap-2 px-2 pb-2"
+                                >
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-31"
+                                        data-title="Document workspace permission rules"
+                                        data-status="backlog"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <div class="flex items-start gap-2">
+                                            <p
+                                                class="line-clamp-2 flex-1 leading-5 font-medium"
+                                            >
+                                                Document workspace permission
+                                                rules
+                                            </p>
+                                            <span
+                                                class="bg-muted rounded px-1.5 py-0.5 text-[10px] font-medium"
+                                                >Docs</span
+                                            >
+                                        </div>
+                                        <p
+                                            class="text-muted-foreground mt-2 line-clamp-2 text-xs leading-5"
+                                        >
+                                            Explain Owner, Admin, Lead and
+                                            Member boundaries.
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-31</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >NT</span
+                                            >
+                                        </div>
+                                    </article>
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-29"
+                                        data-title="Add project archive state"
+                                        data-status="backlog"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Add project archive state
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-29</span
+                                            ><span
+                                                class="ml-auto rounded border px-1.5 py-0.5 text-[10px]"
+                                                >Medium</span
+                                            >
+                                        </div>
+                                    </article>
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-27"
+                                        data-title="Notification preferences"
+                                        data-status="backlog"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Notification preferences
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-27</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >AL</span
+                                            >
+                                        </div>
+                                    </article>
+                                </div>
+                                <button
+                                    data-open-create
+                                    class="text-muted-foreground hover:bg-background hover:text-foreground mx-2 mb-2 inline-flex h-8 items-center gap-2 rounded-md px-2 text-xs"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-plus" /></svg
+                                    >Add issue
+                                </button>
+                            </section>
+
+                            <section
+                                class="board-column bg-muted/65 flex min-h-[420px] flex-col rounded-xl"
+                                data-status="todo"
+                            >
+                                <header
+                                    class="flex h-11 items-center gap-2 px-3"
+                                >
+                                    <span
+                                        class="size-2 rounded-full border-2 border-zinc-500"
+                                    ></span>
+                                    <h2
+                                        class="text-xs font-semibold tracking-wide uppercase"
+                                    >
+                                        Todo
+                                    </h2>
+                                    <span
+                                        class="column-count text-muted-foreground text-xs"
+                                        >2</span
+                                    ><button
+                                        class="hover:bg-background ml-auto grid size-7 place-items-center rounded-md"
+                                    >
+                                        <svg class="size-4 fill-current">
+                                            <use href="#i-dots" />
+                                        </svg>
+                                    </button>
+                                </header>
+                                <div
+                                    class="card-list flex flex-1 flex-col gap-2 px-2 pb-2"
+                                >
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-24"
+                                        data-title="Build notification inbox API"
+                                        data-status="todo"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <div class="flex items-start gap-2">
+                                            <p
+                                                class="flex-1 leading-5 font-medium"
+                                            >
+                                                Build notification inbox API
+                                            </p>
+                                            <span
+                                                class="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+                                                >High</span
+                                            >
+                                        </div>
+                                        <div class="mt-2 flex gap-1">
+                                            <span
+                                                class="bg-muted rounded px-1.5 py-0.5 text-[10px]"
+                                                >Backend</span
+                                            ><span
+                                                class="bg-muted rounded px-1.5 py-0.5 text-[10px]"
+                                                >API</span
+                                            >
+                                        </div>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-24</span
+                                            ><span>2 comments</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >NT</span
+                                            >
+                                        </div>
+                                    </article>
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-22"
+                                        data-title="Empty state for new projects"
+                                        data-status="todo"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Empty state for new projects
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-22</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >MK</span
+                                            >
+                                        </div>
+                                    </article>
+                                </div>
+                                <button
+                                    data-open-create
+                                    class="text-muted-foreground hover:bg-background hover:text-foreground mx-2 mb-2 inline-flex h-8 items-center gap-2 rounded-md px-2 text-xs"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-plus" /></svg
+                                    >Add issue
+                                </button>
+                            </section>
+
+                            <section
+                                class="board-column bg-muted/65 flex min-h-[420px] flex-col rounded-xl"
+                                data-status="progress"
+                            >
+                                <header
+                                    class="flex h-11 items-center gap-2 px-3"
+                                >
+                                    <span
+                                        class="size-2 rounded-full bg-blue-500"
+                                    ></span>
+                                    <h2
+                                        class="text-xs font-semibold tracking-wide uppercase"
+                                    >
+                                        In progress
+                                    </h2>
+                                    <span
+                                        class="column-count text-muted-foreground text-xs"
+                                        >2</span
+                                    ><button
+                                        class="hover:bg-background ml-auto grid size-7 place-items-center rounded-md"
+                                    >
+                                        <svg class="size-4 fill-current">
+                                            <use href="#i-dots" />
+                                        </svg>
+                                    </button>
+                                </header>
+                                <div
+                                    class="card-list flex flex-1 flex-col gap-2 px-2 pb-2"
+                                >
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-20"
+                                        data-title="Create project issue board"
+                                        data-status="progress"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Create project issue board
+                                        </p>
+                                        <div
+                                            class="bg-muted mt-2 h-1.5 overflow-hidden rounded-full"
+                                        >
+                                            <div
+                                                class="h-full w-2/3 rounded-full bg-zinc-700 dark:bg-zinc-300"
+                                            ></div>
+                                        </div>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-20</span><span>3 / 5</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >NT</span
+                                            >
+                                        </div>
+                                    </article>
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-18"
+                                        data-title="Normalize API response resources"
+                                        data-status="progress"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Normalize API response resources
+                                        </p>
+                                        <div class="mt-2 flex gap-1">
+                                            <span
+                                                class="bg-muted rounded px-1.5 py-0.5 text-[10px]"
+                                                >Backend</span
+                                            >
+                                        </div>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-18</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >AL</span
+                                            >
+                                        </div>
+                                    </article>
+                                </div>
+                                <button
+                                    data-open-create
+                                    class="text-muted-foreground hover:bg-background hover:text-foreground mx-2 mb-2 inline-flex h-8 items-center gap-2 rounded-md px-2 text-xs"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-plus" /></svg
+                                    >Add issue
+                                </button>
+                            </section>
+
+                            <section
+                                class="board-column bg-muted/65 flex min-h-[420px] flex-col rounded-xl"
+                                data-status="done"
+                            >
+                                <header
+                                    class="flex h-11 items-center gap-2 px-3"
+                                >
+                                    <span
+                                        class="grid size-4 place-items-center rounded-full bg-emerald-600 text-white"
+                                        ><svg
+                                            class="size-2.5 fill-none stroke-current stroke-[3]"
+                                        >
+                                            <use href="#i-check" /></svg
+                                    ></span>
+                                    <h2
+                                        class="text-xs font-semibold tracking-wide uppercase"
+                                    >
+                                        Done
+                                    </h2>
+                                    <span
+                                        class="column-count text-muted-foreground text-xs"
+                                        >2</span
+                                    ><button
+                                        class="hover:bg-background ml-auto grid size-7 place-items-center rounded-md"
+                                    >
+                                        <svg class="size-4 fill-current">
+                                            <use href="#i-dots" />
+                                        </svg>
+                                    </button>
+                                </header>
+                                <div
+                                    class="card-list flex flex-1 flex-col gap-2 px-2 pb-2"
+                                >
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-16"
+                                        data-title="Workspace archive protection"
+                                        data-status="done"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 opacity-75 shadow-xs transition hover:-translate-y-0.5 hover:opacity-100 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Workspace archive protection
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-16</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >NT</span
+                                            >
+                                        </div>
+                                    </article>
+                                    <article
+                                        draggable="true"
+                                        data-issue
+                                        data-id="PLT-14"
+                                        data-title="Project membership roles"
+                                        data-status="done"
+                                        class="group bg-card cursor-pointer rounded-lg border p-3 opacity-75 shadow-xs transition hover:-translate-y-0.5 hover:opacity-100 hover:shadow-sm"
+                                    >
+                                        <p class="leading-5 font-medium">
+                                            Project membership roles
+                                        </p>
+                                        <div
+                                            class="text-muted-foreground mt-3 flex items-center gap-2 text-xs"
+                                        >
+                                            <span>PLT-14</span
+                                            ><span
+                                                class="ml-auto grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                                                >NT</span
+                                            >
+                                        </div>
+                                    </article>
+                                </div>
+                                <button
+                                    data-open-create
+                                    class="text-muted-foreground hover:bg-background hover:text-foreground mx-2 mb-2 inline-flex h-8 items-center gap-2 rounded-md px-2 text-xs"
+                                >
+                                    <svg
+                                        class="size-3.5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-plus" /></svg
+                                    >Add issue
+                                </button>
+                            </section>
+                        </div>
+
+                        <div
+                            id="list-view"
+                            class="bg-card hidden overflow-hidden rounded-xl border"
+                        >
+                            <div class="overflow-x-auto">
+                                <table class="w-full min-w-[760px] text-left">
+                                    <thead
+                                        class="bg-muted/60 text-muted-foreground border-b text-xs"
+                                    >
+                                        <tr>
+                                            <th
+                                                class="w-24 px-4 py-3 font-medium"
+                                            >
+                                                Issue
+                                            </th>
+                                            <th class="px-4 py-3 font-medium">
+                                                Title
+                                            </th>
+                                            <th
+                                                class="w-36 px-4 py-3 font-medium"
+                                            >
+                                                Status
+                                            </th>
+                                            <th
+                                                class="w-28 px-4 py-3 font-medium"
+                                            >
+                                                Priority
+                                            </th>
+                                            <th
+                                                class="w-32 px-4 py-3 font-medium"
+                                            >
+                                                Assignee
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody
+                                        id="issue-table-body"
+                                        class="divide-y"
+                                    ></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div
+                            id="empty-filter"
+                            class="hidden flex-1 place-items-center py-20 text-center"
+                        >
+                            <div>
+                                <div
+                                    class="bg-muted mx-auto grid size-10 place-items-center rounded-full"
+                                >
+                                    <svg
+                                        class="text-muted-foreground size-5 fill-none stroke-current stroke-2"
+                                    >
+                                        <use href="#i-search" />
+                                    </svg>
+                                </div>
+                                <h3 class="mt-3 font-medium">
+                                    No issues found
+                                </h3>
+                                <p class="text-muted-foreground mt-1 text-sm">
+                                    Try changing your search or status filter.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+
+        <div
+            id="panel-overlay"
+            class="fixed inset-0 z-40 hidden bg-black/30"
+        ></div>
+
+        <aside
+            id="issue-panel"
+            class="bg-background fixed inset-y-0 right-0 z-50 flex w-full translate-x-full flex-col border-l shadow-xl transition-transform duration-200 sm:max-w-xl"
+        >
+            <header class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+                <span
+                    id="issue-key"
+                    class="text-muted-foreground text-sm font-medium"
+                    >PLT-24</span
+                ><span class="bg-muted rounded px-2 py-0.5 text-xs">Todo</span
+                ><button
+                    data-close-panels
+                    class="hover:bg-accent ml-auto grid size-8 place-items-center rounded-md"
+                >
+                    <svg class="size-4 fill-none stroke-current stroke-2">
+                        <use href="#i-x" />
+                    </svg>
+                </button>
+            </header>
+            <div class="flex-1 scrollbar-thin overflow-y-auto p-5 sm:p-6">
+                <input
+                    id="issue-title"
+                    class="w-full bg-transparent text-xl font-semibold tracking-tight"
+                    value="Build notification inbox API"
+                />
+                <p class="text-muted-foreground mt-3 text-sm leading-6">
+                    Create endpoints for listing notifications, marking one as
+                    read, and marking all as read. Keep the API ready for the
+                    SPA header inbox.
+                </p>
+                <div
+                    class="mt-6 grid grid-cols-[110px_1fr] items-center gap-x-3 gap-y-4 text-sm"
+                >
+                    <span class="text-muted-foreground">Status</span
+                    ><button
+                        class="w-fit rounded-md border px-2.5 py-1.5 shadow-xs"
+                    >
+                        Todo
+                    </button>
+                    <span class="text-muted-foreground">Priority</span
+                    ><button
+                        class="w-fit rounded-md border px-2.5 py-1.5 shadow-xs"
+                    >
+                        High
+                    </button>
+                    <span class="text-muted-foreground">Assignee</span
+                    ><button
+                        class="flex w-fit items-center gap-2 rounded-md border px-2.5 py-1.5 shadow-xs"
+                    >
+                        <span
+                            class="grid size-5 place-items-center rounded-full bg-zinc-200 text-[8px] font-semibold dark:bg-zinc-700"
+                            >NT</span
+                        >Nathan Tran
+                    </button>
+                    <span class="text-muted-foreground">Labels</span>
+                    <div class="flex gap-1">
+                        <span class="bg-muted rounded px-2 py-1 text-xs"
+                            >Backend</span
+                        ><span class="bg-muted rounded px-2 py-1 text-xs"
+                            >API</span
+                        >
+                    </div>
+                </div>
+                <div class="my-6 border-t"></div>
+                <h3 class="font-medium">Activity</h3>
+                <div class="mt-4 flex gap-3">
+                    <span
+                        class="grid size-7 shrink-0 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                        >NT</span
+                    >
+                    <div class="flex-1">
+                        <textarea
+                            class="bg-background placeholder:text-muted-foreground min-h-20 w-full resize-none rounded-lg border p-3 text-sm"
+                            placeholder="Write a comment..."
+                        ></textarea>
+                        <div class="mt-2 flex justify-end">
+                            <button
+                                class="bg-primary text-primary-foreground h-8 rounded-md px-3 text-xs font-medium"
+                            >
+                                Comment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-3">
+                    <span
+                        class="grid size-7 shrink-0 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700"
+                        >AL</span
+                    >
+                    <div>
+                        <p class="text-sm">
+                            <span class="font-medium">Alex Lee</span> added this
+                            issue to Todo.
+                        </p>
+                        <p class="text-muted-foreground mt-1 text-xs">
+                            Yesterday at 4:18 PM
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <aside
+            id="chat-panel"
+            class="bg-background fixed inset-y-0 right-0 z-50 flex w-full translate-x-full flex-col border-l shadow-xl transition-transform duration-200 sm:max-w-md"
+        >
+            <header class="flex h-14 shrink-0 items-center gap-3 border-b px-4">
+                <span
+                    class="bg-foreground text-background grid size-8 place-items-center rounded-md"
+                    ><svg class="size-4 fill-none stroke-current stroke-2">
+                        <use href="#i-sparkles" /></svg
+                ></span>
+                <div>
+                    <h2 class="font-semibold">IssueFlow AI</h2>
+                    <p class="text-muted-foreground text-[11px]">
+                        Acme Studio · Platform
+                    </p>
+                </div>
+                <button
+                    data-close-panels
+                    class="hover:bg-accent ml-auto grid size-8 place-items-center rounded-md"
+                >
+                    <svg class="size-4 fill-none stroke-current stroke-2">
+                        <use href="#i-x" />
+                    </svg>
+                </button>
+            </header>
+            <div
+                id="chat-messages"
+                class="flex flex-1 scrollbar-thin flex-col gap-5 overflow-y-auto p-4"
+            >
+                <div class="flex gap-3">
+                    <span
+                        class="bg-foreground text-background grid size-7 shrink-0 place-items-center rounded-md"
+                        ><svg
+                            class="size-3.5 fill-none stroke-current stroke-2"
+                        >
+                            <use href="#i-sparkles" /></svg
+                    ></span>
+                    <div class="max-w-[85%]">
+                        <p class="leading-6">
+                            I can help you find, create, or update issues in the
+                            current workspace.
+                        </p>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button
+                                data-prompt="Show my urgent unfinished issues"
+                                class="hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                            >
+                                My urgent issues</button
+                            ><button
+                                data-prompt="Summarize this project"
+                                class="hover:bg-accent rounded-full border px-3 py-1.5 text-xs"
+                            >
+                                Summarize project
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="bg-primary text-primary-foreground ml-auto max-w-[85%] rounded-xl rounded-br-sm px-3 py-2.5"
+                >
+                    Move PLT-24 to in progress.
+                </div>
+                <div class="flex gap-3">
+                    <span
+                        class="bg-foreground text-background grid size-7 shrink-0 place-items-center rounded-md"
+                        ><svg
+                            class="size-3.5 fill-none stroke-current stroke-2"
+                        >
+                            <use href="#i-sparkles" /></svg
+                    ></span>
+                    <div class="max-w-[88%]">
+                        <p class="leading-6">
+                            I found
+                            <button
+                                data-open-issue="PLT-24"
+                                class="font-medium underline underline-offset-4"
+                            >
+                                PLT-24</button
+                            >. This action will change its status.
+                        </p>
+                        <div class="bg-muted/50 mt-3 rounded-lg border p-3">
+                            <div
+                                class="flex items-center gap-2 text-xs font-medium"
+                            >
+                                <span
+                                    class="bg-background rounded px-1.5 py-0.5 font-mono"
+                                    >update_issue</span
+                                ><span class="text-muted-foreground"
+                                    >Needs confirmation</span
+                                >
+                            </div>
+                            <div
+                                class="mt-3 grid grid-cols-[80px_1fr] gap-2 text-xs"
+                            >
+                                <span class="text-muted-foreground">Issue</span
+                                ><span>PLT-24</span
+                                ><span class="text-muted-foreground"
+                                    >Status</span
+                                ><span>Todo → In progress</span>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button
+                                    id="confirm-tool"
+                                    class="bg-primary text-primary-foreground h-8 rounded-md px-3 text-xs font-medium"
+                                >
+                                    Confirm</button
+                                ><button
+                                    class="bg-background h-8 rounded-md border px-3 text-xs font-medium"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t p-3">
+                <div class="bg-background rounded-xl border p-2 shadow-xs">
+                    <textarea
+                        id="chat-input"
+                        rows="2"
+                        class="placeholder:text-muted-foreground w-full resize-none bg-transparent px-1 text-sm"
+                        placeholder="Ask about this workspace..."
+                    ></textarea>
+                    <div class="mt-1 flex items-center justify-between">
+                        <span class="text-muted-foreground px-1 text-[10px]"
+                            >AI actions always respect your permissions</span
+                        ><button
+                            id="send-chat"
+                            class="bg-primary text-primary-foreground grid size-8 place-items-center rounded-md"
+                        >
+                            <svg
+                                class="size-4 fill-none stroke-current stroke-2"
+                            >
+                                <use href="#i-send" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div
+            id="create-modal"
+            class="fixed inset-0 z-[60] hidden place-items-center bg-black/40 p-4"
+        >
+            <div
+                class="bg-background w-full max-w-lg rounded-xl border shadow-xl"
+            >
+                <div class="flex items-center border-b px-5 py-4">
+                    <h2 class="font-semibold">Create issue</h2>
+                    <button
+                        data-close-create
+                        class="hover:bg-accent ml-auto grid size-8 place-items-center rounded-md"
+                    >
+                        <svg class="size-4 fill-none stroke-current stroke-2">
+                            <use href="#i-x" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="flex flex-col gap-4 p-5">
+                    <label class="flex flex-col gap-1.5"
+                        ><span class="text-xs font-medium">Title</span
+                        ><input
+                            class="bg-background h-10 rounded-md border px-3"
+                            placeholder="What needs to be done?" /></label
+                    ><label class="flex flex-col gap-1.5"
+                        ><span class="text-xs font-medium">Description</span
+                        ><textarea
+                            class="bg-background min-h-28 resize-none rounded-md border p-3"
+                            placeholder="Add context, acceptance criteria, links..."
+                        ></textarea>
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex flex-col gap-1.5"
+                            ><span class="text-xs font-medium">Status</span
+                            ><select
+                                class="bg-background h-10 rounded-md border px-3"
+                            >
+                                <option>Todo</option>
+                                <option>Backlog</option>
+                                <option>In progress</option>
+                            </select></label
+                        ><label class="flex flex-col gap-1.5"
+                            ><span class="text-xs font-medium">Priority</span
+                            ><select
+                                class="bg-background h-10 rounded-md border px-3"
+                            >
+                                <option>Medium</option>
+                                <option>High</option>
+                                <option>Low</option>
+                            </select></label
+                        >
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 border-t px-5 py-4">
+                    <button
+                        data-close-create
+                        class="bg-background h-9 rounded-md border px-4 font-medium"
+                    >
+                        Cancel</button
+                    ><button
+                        id="create-submit"
+                        class="bg-primary text-primary-foreground h-9 rounded-md px-4 font-medium"
+                    >
+                        Create issue
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div
+            id="toast"
+            class="bg-foreground text-background fixed bottom-4 left-1/2 z-[70] hidden -translate-x-1/2 items-center gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg"
+        >
+            <svg class="size-4 fill-none stroke-current stroke-2">
+                <use href="#i-check" /></svg
+            ><span id="toast-text">Saved</span>
+        </div>
+
+        <script>
+            const $ = (selector, root = document) =>
+                root.querySelector(selector);
+            const $$ = (selector, root = document) => [
+                ...root.querySelectorAll(selector),
+            ];
+            const statusLabels = {
+                backlog: 'Backlog',
+                todo: 'Todo',
+                progress: 'In progress',
+                done: 'Done',
+            };
+
+            const sidebar = $('#sidebar');
+            const sidebarOverlay = $('#sidebar-overlay');
+            $('#open-sidebar').addEventListener('click', () => {
+                sidebar.classList.remove('-translate-x-full');
+                sidebarOverlay.classList.remove('hidden');
+            });
+            $$('[data-close-sidebar]').forEach((button) =>
+                button.addEventListener('click', () => {
+                    sidebar.classList.add('-translate-x-full');
+                    sidebarOverlay.classList.add('hidden');
+                }),
+            );
+
+            $('#workspace-trigger').addEventListener('click', () => {
+                const menu = $('#workspace-menu');
+                menu.classList.toggle('hidden');
+                $('#workspace-trigger').setAttribute(
+                    'aria-expanded',
+                    String(!menu.classList.contains('hidden')),
+                );
+            });
+
+            $('#theme-toggle').addEventListener('click', () =>
+                document.documentElement.classList.toggle('dark'),
+            );
+
+            const board = $('#board-view');
+            const list = $('#list-view');
+            $$('.view-button').forEach((button) =>
+                button.addEventListener('click', () => {
+                    const isBoard = button.dataset.view === 'board';
+                    board.classList.toggle('hidden', !isBoard);
+                    list.classList.toggle('hidden', isBoard);
+                    $$('.view-button').forEach((item) => {
+                        const active = item === button;
+                        item.classList.toggle('bg-background', active);
+                        item.classList.toggle('shadow-xs', active);
+                        item.classList.toggle('text-muted-foreground', !active);
+                    });
+                    if (!isBoard) renderTable();
+                }),
+            );
+
+            function issueCards() {
+                return $$('[data-issue]');
+            }
+
+            function renderTable() {
+                $('#issue-table-body').innerHTML = issueCards()
+                    .map(
+                        (card) => `
+                <tr data-table-issue data-id="${card.dataset.id}" data-title="${card.dataset.title}" data-status="${card.dataset.status}" class="cursor-pointer hover:bg-muted/50">
+                    <td class="px-4 py-3 font-mono text-xs text-muted-foreground">${card.dataset.id}</td>
+                    <td class="px-4 py-3 font-medium">${card.dataset.title}</td>
+                    <td class="px-4 py-3"><span class="rounded-md bg-muted px-2 py-1 text-xs">${statusLabels[card.dataset.status]}</span></td>
+                    <td class="px-4 py-3 text-xs text-muted-foreground">Medium</td>
+                    <td class="px-4 py-3"><span class="inline-flex items-center gap-2 text-xs"><span class="grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700">NT</span>Nathan</span></td>
+                </tr>
+            `,
+                    )
+                    .join('');
+                $$('[data-table-issue]').forEach((row) =>
+                    row.addEventListener('click', () => openIssue(row.dataset)),
+                );
+                applyFilters();
+            }
+
+            const issuePanel = $('#issue-panel');
+            const chatPanel = $('#chat-panel');
+            const panelOverlay = $('#panel-overlay');
+            function closePanels() {
+                issuePanel.classList.add('translate-x-full');
+                chatPanel.classList.add('translate-x-full');
+                panelOverlay.classList.add('hidden');
+            }
+            function openIssue(data) {
+                closePanels();
+                $('#issue-key').textContent = data.id || 'PLT-24';
+                $('#issue-title').value =
+                    data.title || 'Build notification inbox API';
+                panelOverlay.classList.remove('hidden');
+                issuePanel.classList.remove('translate-x-full');
+            }
+            function openChat() {
+                closePanels();
+                panelOverlay.classList.remove('hidden');
+                chatPanel.classList.remove('translate-x-full');
+                setTimeout(() => $('#chat-input').focus(), 220);
+            }
+            issueCards().forEach((card) =>
+                card.addEventListener('click', (event) => {
+                    if (!card.classList.contains('dragging'))
+                        openIssue(card.dataset);
+                }),
+            );
+            $$('[data-open-issue]').forEach((button) =>
+                button.addEventListener('click', () =>
+                    openIssue({
+                        id: button.dataset.openIssue,
+                        title: 'Build notification inbox API',
+                    }),
+                ),
+            );
+            $$('[data-open-chat]').forEach((button) =>
+                button.addEventListener('click', openChat),
+            );
+            $$('[data-close-panels]').forEach((button) =>
+                button.addEventListener('click', closePanels),
+            );
+            panelOverlay.addEventListener('click', closePanels);
+
+            const modal = $('#create-modal');
+            $$('[data-open-create]').forEach((button) =>
+                button.addEventListener('click', () => {
+                    modal.classList.remove('hidden');
+                    modal.classList.add('grid');
+                    setTimeout(() => $('input', modal).focus(), 0);
+                }),
+            );
+            $$('[data-close-create]').forEach((button) =>
+                button.addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('grid');
+                }),
+            );
+
+            function showToast(message) {
+                $('#toast-text').textContent = message;
+                $('#toast').classList.remove('hidden');
+                $('#toast').classList.add('flex');
+                clearTimeout(window.toastTimer);
+                window.toastTimer = setTimeout(() => {
+                    $('#toast').classList.add('hidden');
+                    $('#toast').classList.remove('flex');
+                }, 2200);
+            }
+            $('#create-submit').addEventListener('click', () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('grid');
+                showToast('Issue created in Todo');
+            });
+
+            let draggedCard = null;
+            issueCards().forEach((card) => {
+                card.addEventListener('dragstart', () => {
+                    draggedCard = card;
+                    requestAnimationFrame(() => card.classList.add('dragging'));
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    draggedCard = null;
+                    $$('.board-column').forEach((column) =>
+                        column.classList.remove('drop-target'),
+                    );
+                });
+            });
+            $$('.board-column').forEach((column) => {
+                column.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    column.classList.add('drop-target');
+                });
+                column.addEventListener('dragleave', () =>
+                    column.classList.remove('drop-target'),
+                );
+                column.addEventListener('drop', (event) => {
+                    event.preventDefault();
+                    column.classList.remove('drop-target');
+                    if (!draggedCard) return;
+                    $('.card-list', column).appendChild(draggedCard);
+                    draggedCard.dataset.status = column.dataset.status;
+                    updateCounts();
+                    showToast(
+                        `${draggedCard.dataset.id} moved to ${statusLabels[column.dataset.status]}`,
+                    );
+                });
+            });
+            function updateCounts() {
+                $$('.board-column').forEach(
+                    (column) =>
+                        ($('.column-count', column).textContent = $$(
+                            '[data-issue]',
+                            column,
+                        ).length),
+                );
+            }
+
+            const issueSearch = $('#issue-search');
+            const statusFilter = $('#status-filter');
+            function applyFilters() {
+                const term = issueSearch.value.trim().toLowerCase();
+                const status = statusFilter.value;
+                let visible = 0;
+                issueCards().forEach((card) => {
+                    const show =
+                        (!term ||
+                            `${card.dataset.id} ${card.dataset.title}`
+                                .toLowerCase()
+                                .includes(term)) &&
+                        (status === 'all' || card.dataset.status === status);
+                    card.classList.toggle('hidden', !show);
+                    if (show) visible++;
+                });
+                $$('[data-table-issue]').forEach((row) => {
+                    const show =
+                        (!term ||
+                            `${row.dataset.id} ${row.dataset.title}`
+                                .toLowerCase()
+                                .includes(term)) &&
+                        (status === 'all' || row.dataset.status === status);
+                    row.classList.toggle('hidden', !show);
+                });
+                $('#clear-filter').classList.toggle(
+                    'hidden',
+                    !term && status === 'all',
+                );
+                $('#clear-filter').classList.toggle(
+                    'inline-flex',
+                    !!term || status !== 'all',
+                );
+                $('#empty-filter').classList.toggle('hidden', visible !== 0);
+                $('#empty-filter').classList.toggle('grid', visible === 0);
+            }
+            issueSearch.addEventListener('input', applyFilters);
+            statusFilter.addEventListener('change', applyFilters);
+            $('#clear-filter').addEventListener('click', () => {
+                issueSearch.value = '';
+                statusFilter.value = 'all';
+                applyFilters();
+            });
+
+            $$('[data-prompt]').forEach((button) =>
+                button.addEventListener('click', () => {
+                    $('#chat-input').value = button.dataset.prompt;
+                    $('#chat-input').focus();
+                }),
+            );
+            function sendChat() {
+                const input = $('#chat-input');
+                if (!input.value.trim()) return;
+                const bubble = document.createElement('div');
+                bubble.className =
+                    'ml-auto max-w-[85%] rounded-xl rounded-br-sm bg-primary px-3 py-2.5 text-primary-foreground';
+                bubble.textContent = input.value.trim();
+                $('#chat-messages').appendChild(bubble);
+                input.value = '';
+                $('#chat-messages').scrollTop =
+                    $('#chat-messages').scrollHeight;
+            }
+            $('#send-chat').addEventListener('click', sendChat);
+            $('#chat-input').addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    sendChat();
+                }
+            });
+            $('#confirm-tool').addEventListener('click', () => {
+                closePanels();
+                const card = $('[data-id="PLT-24"]');
+                const target = $('[data-status="progress"] .card-list');
+                if (card && target) {
+                    target.appendChild(card);
+                    card.dataset.status = 'progress';
+                    updateCounts();
+                }
+                showToast('PLT-24 moved to In progress');
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    closePanels();
+                    modal.classList.add('hidden');
+                    modal.classList.remove('grid');
+                }
+                if (
+                    (event.metaKey || event.ctrlKey) &&
+                    event.key.toLowerCase() === 'k'
+                ) {
+                    event.preventDefault();
+                    $('#global-search').focus();
+                }
+            });
+        </script>
+    </body>
+</html>
