@@ -1,12 +1,14 @@
-import { Circle, CircleCheck, CircleDot, Flag, UserRound } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import type { Issue, IssueStatus } from '@/types/issue-flow';
+import { Circle, CircleCheck, CircleDot, Flag } from "lucide-react";
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { Issue, IssueStatus } from "@/types/issue-flow";
 
 const columns: { status: IssueStatus; label: string; icon: typeof Circle }[] = [
-    { status: 'todo', label: 'Todo', icon: Circle },
-    { status: 'in_progress', label: 'In progress', icon: CircleDot },
-    { status: 'done', label: 'Done', icon: CircleCheck },
+    { status: "todo", label: "Todo", icon: Circle },
+    { status: "in_progress", label: "In progress", icon: CircleDot },
+    { status: "done", label: "Done", icon: CircleCheck },
 ];
 
 export function issueKey(issue: Issue): string {
@@ -15,62 +17,80 @@ export function issueKey(issue: Issue): string {
 
 function IssueCard({
     issue,
+    canMove,
+    isDragging,
     onOpen,
+    onDragStart,
+    onDragEnd,
 }: {
     issue: Issue;
+    canMove: boolean;
+    isDragging: boolean;
     onOpen: (issue: Issue) => void;
+    onDragStart: (issue: Issue) => void;
+    onDragEnd: () => void;
 }) {
     return (
-        <button
-            type="button"
-            onClick={() => onOpen(issue)}
-            className="bg-card hover:border-foreground/30 focus-visible:ring-ring w-full rounded-lg border p-3 text-left shadow-xs transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-            <span className="text-muted-foreground text-xs font-medium">
-                {issueKey(issue)}
-            </span>
-            <span className="mt-1 block text-sm leading-snug font-medium">
-                {issue.title}
-            </span>
-            {issue.labels.length > 0 && (
-                <span className="mt-3 flex flex-wrap gap-1">
-                    {issue.labels.map((label) => (
-                        <Badge key={label.id} variant="secondary">
-                            {label.name}
-                        </Badge>
-                    ))}
-                </span>
+        <article
+            draggable={canMove}
+            onDragStart={() => onDragStart(issue)}
+            onDragEnd={onDragEnd}
+            onClick={() => !isDragging && onOpen(issue)}
+            className={cn(
+                "group bg-card cursor-pointer rounded-lg border p-3 shadow-xs transition hover:-translate-y-0.5 hover:shadow-sm",
+                canMove && "cursor-grab active:cursor-grabbing",
+                isDragging && "rotate-1 opacity-50",
             )}
-            <span className="text-muted-foreground mt-3 flex items-center justify-between gap-2 text-xs">
-                <span className="flex items-center gap-1 capitalize">
+        >
+            <div className="flex items-start gap-2">
+                <p className="line-clamp-2 flex-1 text-sm leading-5 font-medium">{issue.title}</p>
+                {issue.labels[0] && (
+                    <Badge variant="secondary" className="text-[10px]">
+                        {issue.labels[0].name}
+                    </Badge>
+                )}
+            </div>
+            {issue.description && (
+                <p className="text-muted-foreground mt-2 line-clamp-2 text-xs leading-5">
+                    {issue.description}
+                </p>
+            )}
+            <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
+                <span className="font-mono">{issueKey(issue)}</span>
+                <span className="ml-auto flex items-center gap-1 capitalize">
                     <Flag className="size-3.5" />
                     {issue.priority}
                 </span>
-                <span className="flex min-w-0 items-center gap-1 truncate">
-                    <UserRound className="size-3.5 shrink-0" />
-                    {issue.assignee?.name ?? 'Unassigned'}
+                <span className="grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700">
+                    {initials(issue.assignee?.name ?? "?")}
                 </span>
-            </span>
-        </button>
+            </div>
+        </article>
     );
+}
+
+function initials(name: string): string {
+    return name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
 }
 
 type Props = {
     issues: Issue[];
-    view: 'board' | 'list';
+    view: "board" | "list";
+    canMove: boolean;
     onOpen: (issue: Issue) => void;
+    onMove: (issue: Issue, status: IssueStatus) => void;
 };
 
-export function IssueCollection({ issues, view, onOpen }: Props) {
-    if (issues.length === 0) {
-        return (
-            <div className="text-muted-foreground flex min-h-52 items-center justify-center rounded-lg border border-dashed text-sm">
-                No issues match these filters.
-            </div>
-        );
-    }
+export function IssueCollection({ issues, view, canMove, onOpen, onMove }: Props) {
+    const [draggedIssue, setDraggedIssue] = useState<Issue | null>(null);
+    const [dropTarget, setDropTarget] = useState<IssueStatus | null>(null);
 
-    if (view === 'list') {
+    if (view === "list") {
         return (
             <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full min-w-[650px] text-left text-sm">
@@ -91,7 +111,7 @@ export function IssueCollection({ issues, view, onOpen }: Props) {
                                         className="h-auto justify-start gap-3 p-0 text-left"
                                         onClick={() => onOpen(issue)}
                                     >
-                                        <span className="text-muted-foreground text-xs">
+                                        <span className="text-muted-foreground font-mono text-xs">
                                             {issueKey(issue)}
                                         </span>
                                         <span className="text-foreground max-w-80 truncate font-medium">
@@ -100,48 +120,80 @@ export function IssueCollection({ issues, view, onOpen }: Props) {
                                     </Button>
                                 </td>
                                 <td className="px-4 py-3 capitalize">
-                                    {issue.status.replace('_', ' ')}
+                                    {issue.status.replace("_", " ")}
                                 </td>
-                                <td className="px-4 py-3 capitalize">
-                                    {issue.priority}
-                                </td>
+                                <td className="px-4 py-3 capitalize">{issue.priority}</td>
                                 <td className="text-muted-foreground px-4 py-3">
-                                    {issue.assignee?.name ?? 'Unassigned'}
+                                    {issue.assignee?.name ?? "Unassigned"}
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+                {issues.length === 0 && (
+                    <p className="text-muted-foreground py-12 text-center text-sm">
+                        No issues match these filters.
+                    </p>
+                )}
             </div>
         );
     }
 
+    function finishDrag(): void {
+        setDraggedIssue(null);
+        setDropTarget(null);
+    }
+
     return (
-        <div className="grid auto-cols-[minmax(260px,1fr)] grid-flow-col gap-3 overflow-x-auto pb-4 lg:grid-flow-row lg:grid-cols-3">
+        <div className="grid flex-1 auto-cols-[minmax(280px,340px)] grid-flow-col gap-3 overflow-x-auto pb-5">
             {columns.map(({ status, label, icon: Icon }) => {
-                const columnIssues = issues.filter(
-                    (issue) => issue.status === status,
-                );
+                const columnIssues = issues.filter((issue) => issue.status === status);
 
                 return (
                     <section
                         key={status}
                         aria-label={label}
-                        className="bg-muted/40 min-h-72 rounded-lg border p-2"
+                        onDragOver={(event) => {
+                            if (!draggedIssue) return;
+                            event.preventDefault();
+                            setDropTarget(status);
+                        }}
+                        onDragLeave={(event) => {
+                            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+                                setDropTarget(null);
+                            }
+                        }}
+                        onDrop={(event) => {
+                            event.preventDefault();
+                            if (draggedIssue && draggedIssue.status !== status) {
+                                onMove(draggedIssue, status);
+                            }
+                            finishDrag();
+                        }}
+                        className={cn(
+                            "bg-muted/65 flex min-h-[420px] flex-col rounded-xl border border-transparent transition-colors",
+                            dropTarget === status && "bg-accent ring-ring/30 ring-2 ring-inset",
+                        )}
                     >
-                        <div className="flex items-center gap-2 px-2 py-2 text-sm font-medium">
+                        <header className="flex h-11 items-center gap-2 px-3">
                             <Icon className="text-muted-foreground size-4" />
-                            {label}
-                            <span className="text-muted-foreground ml-auto text-xs">
+                            <h2 className="text-xs font-semibold tracking-wide uppercase">
+                                {label}
+                            </h2>
+                            <span className="text-muted-foreground text-xs">
                                 {columnIssues.length}
                             </span>
-                        </div>
-                        <div className="flex flex-col gap-2">
+                        </header>
+                        <div className="flex flex-1 flex-col gap-2 px-2 pb-2">
                             {columnIssues.map((issue) => (
                                 <IssueCard
                                     key={issue.id}
                                     issue={issue}
+                                    canMove={canMove}
+                                    isDragging={draggedIssue?.id === issue.id}
                                     onOpen={onOpen}
+                                    onDragStart={setDraggedIssue}
+                                    onDragEnd={finishDrag}
                                 />
                             ))}
                         </div>

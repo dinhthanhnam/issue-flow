@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Workspace;
 use Inertia\Testing\AssertableInertia as Assert;
 
 test('the home page leads guests to the login screen', function () {
@@ -27,6 +28,34 @@ test('authenticated users can visit the dashboard', function () {
     $user = User::factory()->create();
     $this->actingAs($user);
 
-    $response = $this->get(route('dashboard'));
-    $response->assertOk();
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('workspaces', [])
+            ->where('workspace', null)
+            ->where('projects', [])
+            ->where('project', null)
+            ->where('issues', null));
+});
+
+test('dashboard provides the selected workspace project and issues', function () {
+    $this->seed();
+    $user = User::query()->where('email', 'test@example.com')->firstOrFail();
+    $workspace = Workspace::query()->where('slug', 'demo-issue-flow')->firstOrFail();
+    $project = $workspace->projects()->where('key', 'DEMO')->firstOrFail();
+
+    $this->actingAs($user)
+        ->get(route('dashboard', [
+            'workspace' => $workspace->id,
+            'project' => $project->id,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('workspace.id', $workspace->id)
+            ->where('project.id', $project->id)
+            ->has('workspaces', 1)
+            ->has('projects', 1)
+            ->has('issues.data', 5));
 });
