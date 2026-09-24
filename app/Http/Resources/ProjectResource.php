@@ -21,6 +21,7 @@ class ProjectResource extends JsonResource
             'key' => $this->key,
             'description' => $this->description,
             'created_at' => $this->created_at,
+            'can_create_issue' => $request->user()?->can('createIssue', $this->resource) ?? false,
         ];
     }
 }

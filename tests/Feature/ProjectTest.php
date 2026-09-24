@@ -70,6 +70,33 @@ test('a workspace member can view a project', function () {
         ]);
 });
 
+test('the project API exposes issue creation permission for the current user', function () {
+    $viewer = User::factory()->create();
+    $contributor = User::factory()->create();
+    $workspace = Workspace::factory()->create();
+    $project = Project::factory()->for($workspace)->create();
+
+    $workspace->users()->attach([$viewer->id, $contributor->id], [
+        'role' => WorkspaceRole::Member->value,
+    ]);
+    $project->users()->attach($viewer, [
+        'role' => ProjectRole::Viewer->value,
+    ]);
+    $project->users()->attach($contributor, [
+        'role' => ProjectRole::Member->value,
+    ]);
+
+    actingAs($viewer)
+        ->getJson(route('workspaces.projects.index', $workspace))
+        ->assertOk()
+        ->assertJsonPath('data.0.can_create_issue', false);
+
+    actingAs($contributor)
+        ->getJson(route('workspaces.projects.index', $workspace))
+        ->assertOk()
+        ->assertJsonPath('data.0.can_create_issue', true);
+});
+
 test('a non-member cannot view a project', function () {
     $user = User::factory()->create();
     $workspace = Workspace::factory()->create();
