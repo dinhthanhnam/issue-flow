@@ -6,11 +6,13 @@ import {
     Search,
     Sparkles,
     SunMoon,
+    Users,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { index as listComments } from '@/actions/App/Http/Controllers/CommentController';
 import { update as updateIssue } from '@/actions/App/Http/Controllers/IssueController';
+import { index as listWorkspaceMembers } from '@/actions/App/Http/Controllers/WorkspaceMemberController';
 import { AiPanel } from '@/components/issue-flow/ai-panel';
 import { CreateIssueDialog } from '@/components/issue-flow/create-issue-dialog';
 import { CreateProjectDialog } from '@/components/issue-flow/create-project-dialog';
@@ -18,6 +20,7 @@ import { CreateWorkspaceDialog } from '@/components/issue-flow/create-workspace-
 import { IssueCollection } from '@/components/issue-flow/issue-collection';
 import { IssueDetail } from '@/components/issue-flow/issue-detail';
 import { WorkspaceSidebar } from '@/components/issue-flow/workspace-sidebar';
+import { WorkspaceMembersSheet } from '@/components/issue-flow/workspace-members-sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -45,6 +48,7 @@ import type {
     Project,
     ProjectMember,
     Workspace,
+    WorkspaceMember,
 } from '@/types/issue-flow';
 
 type DashboardProps = {
@@ -78,6 +82,7 @@ function IssueWorkspace({
     const { props } = usePage();
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const commentsRequest = useRef<AbortController | null>(null);
+    const workspaceMembersRequest = useRef<AbortController | null>(null);
     const [issues, setIssues] = useState(issuesPage?.data ?? []);
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState<IssueFilter>('all');
@@ -92,6 +97,12 @@ function IssueWorkspace({
     const [createOpen, setCreateOpen] = useState(false);
     const [createProjectOpen, setCreateProjectOpen] = useState(false);
     const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+    const [workspaceMembersOpen, setWorkspaceMembersOpen] = useState(false);
+    const [workspaceMembers, setWorkspaceMembers] = useState<WorkspaceMember[]>(
+        [],
+    );
+    const [workspaceMembersLoading, setWorkspaceMembersLoading] =
+        useState(false);
     const canCreateProject =
         workspace !== null &&
         workspace.archived_at === null &&
@@ -176,6 +187,42 @@ function IssueWorkspace({
         setCommentsLoading(false);
     }
 
+    function openWorkspaceMembers(): void {
+        if (workspace === null) {
+            return;
+        }
+
+        workspaceMembersRequest.current?.abort();
+        const request = new AbortController();
+        workspaceMembersRequest.current = request;
+
+        setWorkspaceMembersOpen(true);
+        setWorkspaceMembers([]);
+        setWorkspaceMembersLoading(true);
+
+        void getJson<ApiCollection<WorkspaceMember>>(
+            listWorkspaceMembers.url(workspace.id),
+            request.signal,
+        )
+            .then((response) => setWorkspaceMembers(response.data))
+            .catch((error: unknown) => {
+                if (!request.signal.aborted) {
+                    toast.error(apiErrorMessage(error));
+                }
+            })
+            .finally(() => {
+                if (!request.signal.aborted) {
+                    setWorkspaceMembersLoading(false);
+                }
+            });
+    }
+
+    function closeWorkspaceMembers(): void {
+        workspaceMembersRequest.current?.abort();
+        setWorkspaceMembersOpen(false);
+        setWorkspaceMembersLoading(false);
+    }
+
     function moveIssue(issue: Issue, nextStatus: IssueStatus): void {
         const previousStatus = issue.status;
         const optimisticIssue = { ...issue, status: nextStatus };
@@ -240,6 +287,17 @@ function IssueWorkspace({
                             >
                                 <SunMoon className="size-4" />
                             </Button>
+                            {workspace && (
+                                <Button
+                                    variant="outline"
+                                    onClick={openWorkspaceMembers}
+                                >
+                                    <Users className="size-4" />
+                                    <span className="hidden md:inline">
+                                        Members
+                                    </span>
+                                </Button>
+                            )}
                             <Button
                                 variant="outline"
                                 onClick={() => setChatOpen(true)}
@@ -480,6 +538,18 @@ function IssueWorkspace({
                     open={createProjectOpen}
                     onClose={() => setCreateProjectOpen(false)}
                     workspace={workspace}
+                />
+            )}
+
+            {workspace && (
+                <WorkspaceMembersSheet
+                    open={workspaceMembersOpen}
+                    loading={workspaceMembersLoading}
+                    workspace={workspace}
+                    currentUserId={props.auth.user.id}
+                    members={workspaceMembers}
+                    onClose={closeWorkspaceMembers}
+                    onMembersChange={setWorkspaceMembers}
                 />
             )}
 

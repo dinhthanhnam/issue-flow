@@ -29,6 +29,14 @@ export type ProjectMember = {
     role: ProjectRole;
 };
 
+export type WorkspaceMember = {
+    id: number;
+    name: string;
+    email: string;
+    role: WorkspaceRole;
+    created_at: string;
+};
+
 export type IssueLabel = {
     id: number;
     workspace_id: number;
