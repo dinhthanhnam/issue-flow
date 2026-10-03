@@ -1,13 +1,17 @@
 import {
     destroy as removeWorkspaceMember,
+    store as addWorkspaceMember,
     update as updateWorkspaceMember,
 } from '@/actions/App/Http/Controllers/WorkspaceMemberController';
+import { show as findWorkspaceMemberCandidate } from '@/actions/App/Http/Controllers/WorkspaceMemberCandidateController';
+import { AddMemberForm } from '@/components/issue-flow/add-member-form';
 import {
     MemberManagementSheet,
     type MemberRoleOption,
 } from '@/components/issue-flow/member-management-sheet';
-import { deleteWithoutResponse, patchJson } from '@/lib/api';
+import { deleteWithoutResponse, getJson, patchJson, postJson } from '@/lib/api';
 import type {
+    MemberCandidate,
     Workspace,
     WorkspaceMember,
     WorkspaceRole,
@@ -15,6 +19,10 @@ import type {
 
 const workspaceRoleOptions: MemberRoleOption[] = [
     { value: 'admin', label: 'Admin' },
+    { value: 'member', label: 'Member' },
+];
+
+const memberOnlyRoleOption: MemberRoleOption[] = [
     { value: 'member', label: 'Member' },
 ];
 
@@ -53,6 +61,35 @@ export function WorkspaceMembersSheet({
         return canManageTarget(member) && workspace.role === 'owner'
             ? workspaceRoleOptions
             : [];
+    }
+
+    async function findCandidate(email: string): Promise<MemberCandidate> {
+        const response = await getJson<{ data: MemberCandidate }>(
+            findWorkspaceMemberCandidate.url(workspace.id, {
+                query: { email },
+            }),
+        );
+
+        return response.data;
+    }
+
+    async function addMember(
+        candidate: MemberCandidate,
+        role: string,
+    ): Promise<void> {
+        const response = await postJson<{ data: WorkspaceMember }>(
+            addWorkspaceMember.url(workspace.id),
+            {
+                user_id: candidate.id,
+                role: role as WorkspaceRole,
+            },
+        );
+
+        onMembersChange(
+            [...members, response.data].sort((left, right) =>
+                left.name.localeCompare(right.name),
+            ),
+        );
     }
 
     async function updateRole(
@@ -94,6 +131,19 @@ export function WorkspaceMembersSheet({
             removalContext={workspace.name}
             currentUserId={currentUserId}
             members={members}
+            addMember={
+                canManageMembers ? (
+                    <AddMemberForm
+                        roleOptions={
+                            workspace.role === 'owner'
+                                ? workspaceRoleOptions
+                                : memberOnlyRoleOption
+                        }
+                        onFind={findCandidate}
+                        onAdd={addMember}
+                    />
+                ) : undefined
+            }
             roleOptions={roleOptions}
             canRemove={canManageTarget}
             onClose={onClose}

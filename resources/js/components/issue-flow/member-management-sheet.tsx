@@ -1,4 +1,5 @@
 import { Trash2, Users } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -47,6 +48,7 @@ type Props<TMember extends ManagedMember> = {
     removalContext: string;
     currentUserId: number;
     members: TMember[];
+    addMember?: ReactNode;
     roleOptions: (member: TMember) => MemberRoleOption[];
     canRemove: (member: TMember) => boolean;
     onClose: () => void;
@@ -62,6 +64,7 @@ export function MemberManagementSheet<TMember extends ManagedMember>({
     removalContext,
     currentUserId,
     members,
+    addMember,
     roleOptions,
     canRemove,
     onClose,
@@ -117,6 +120,8 @@ export function MemberManagementSheet<TMember extends ManagedMember>({
                     </SheetHeader>
 
                     <div className="flex-1 overflow-y-auto p-5">
+                        {addMember}
+
                         {loading && (
                             <p className="text-muted-foreground py-10 text-center text-sm">
                                 Loading members…

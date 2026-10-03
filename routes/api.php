@@ -5,8 +5,10 @@ use App\Http\Controllers\IssueController;
 use App\Http\Controllers\IssueLabelController;
 use App\Http\Controllers\LabelController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectMemberCandidateController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceMemberCandidateController;
 use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -47,6 +49,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])
         ->middleware('workspace.active')
         ->name('workspaces.members.destroy');
+    Route::get('workspaces/{workspace}/member-candidate', [WorkspaceMemberCandidateController::class, 'show'])
+        ->name('workspaces.member-candidate.show');
     // Project api routes
     Route::get('projects/{project}', [ProjectController::class, 'show'])
         ->name('projects.show');
@@ -71,6 +75,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('projects/{project}/members/{user}', [ProjectMemberController::class, 'destroy'])
         ->middleware('workspace.active')
         ->name('projects.members.destroy');
+    Route::get('projects/{project}/member-candidate', [ProjectMemberCandidateController::class, 'show'])
+        ->name('projects.member-candidate.show');
 
     // Label routes
     Route::get('workspaces/{workspace}/labels', [LabelController::class, 'index'])

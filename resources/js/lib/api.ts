@@ -1,7 +1,7 @@
 import { http, HttpResponseError } from '@inertiajs/core';
 
 async function requestJson<T>(
-    method: 'get' | 'patch',
+    method: 'get' | 'post' | 'patch',
     url: string,
     data?: unknown,
     signal?: AbortSignal,
@@ -37,6 +37,10 @@ export async function getJson<T>(
 
 export async function patchJson<T>(url: string, data: unknown): Promise<T> {
     return requestJson<T>('patch', url, data);
+}
+
+export async function postJson<T>(url: string, data: unknown): Promise<T> {
+    return requestJson<T>('post', url, data);
 }
 
 export async function postWithoutResponse(url: string): Promise<void> {

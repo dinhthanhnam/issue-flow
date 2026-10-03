@@ -38,6 +38,12 @@ export type WorkspaceMember = {
     created_at: string;
 };
 
+export type MemberCandidate = {
+    id: number;
+    name: string;
+    email: string;
+};
+
 export type IssueLabel = {
     id: number;
     workspace_id: number;

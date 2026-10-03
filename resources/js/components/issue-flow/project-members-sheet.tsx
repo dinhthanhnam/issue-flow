@@ -1,13 +1,17 @@
 import {
     destroy as removeProjectMember,
+    store as addProjectMember,
     update as updateProjectMember,
 } from '@/actions/App/Http/Controllers/ProjectMemberController';
+import { show as findProjectMemberCandidate } from '@/actions/App/Http/Controllers/ProjectMemberCandidateController';
+import { AddMemberForm } from '@/components/issue-flow/add-member-form';
 import {
     MemberManagementSheet,
     type MemberRoleOption,
 } from '@/components/issue-flow/member-management-sheet';
-import { deleteWithoutResponse, patchJson } from '@/lib/api';
+import { deleteWithoutResponse, getJson, patchJson, postJson } from '@/lib/api';
 import type {
+    MemberCandidate,
     Project,
     ProjectMember,
     ProjectRole,
@@ -65,6 +69,35 @@ export function ProjectMembersSheet({
         return isWorkspaceManager ? managerRoleOptions : leadRoleOptions;
     }
 
+    async function findCandidate(email: string): Promise<MemberCandidate> {
+        const response = await getJson<{ data: MemberCandidate }>(
+            findProjectMemberCandidate.url(project.id, {
+                query: { email },
+            }),
+        );
+
+        return response.data;
+    }
+
+    async function addMember(
+        candidate: MemberCandidate,
+        role: string,
+    ): Promise<void> {
+        const response = await postJson<{ data: ProjectMember }>(
+            addProjectMember.url(project.id),
+            {
+                user_id: candidate.id,
+                role: role as ProjectRole,
+            },
+        );
+
+        onMembersChange(
+            [...members, response.data].sort((left, right) =>
+                left.name.localeCompare(right.name),
+            ),
+        );
+    }
+
     async function updateRole(
         member: ProjectMember,
         role: string,
@@ -104,6 +137,19 @@ export function ProjectMembersSheet({
             removalContext={project.name}
             currentUserId={currentUserId}
             members={members}
+            addMember={
+                canManageMembers ? (
+                    <AddMemberForm
+                        roleOptions={
+                            isWorkspaceManager
+                                ? managerRoleOptions
+                                : leadRoleOptions
+                        }
+                        onFind={findCandidate}
+                        onAdd={addMember}
+                    />
+                ) : undefined
+            }
             roleOptions={roleOptions}
             canRemove={canManageTarget}
             onClose={onClose}
