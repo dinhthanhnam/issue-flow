@@ -61,7 +61,7 @@ function IssueCard({
                     <Flag className="size-3.5" />
                     {issue.priority}
                 </span>
-                <span className="grid size-6 place-items-center rounded-full bg-zinc-200 text-[9px] font-semibold dark:bg-zinc-700">
+                <span className="grid size-6 place-items-center rounded-full bg-zinc-200 text-[10px]! font-semibold dark:bg-zinc-700">
                     {initials(issue.assignee?.name ?? "?")}
                 </span>
             </div>
