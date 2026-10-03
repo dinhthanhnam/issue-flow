@@ -1,26 +1,37 @@
-import { Head, usePage } from "@inertiajs/react";
-import { LayoutGrid, List, Plus, Search, Sparkles, SunMoon } from "lucide-react";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import { index as listComments } from "@/actions/App/Http/Controllers/CommentController";
-import { update as updateIssue } from "@/actions/App/Http/Controllers/IssueController";
-import { AiPanel } from "@/components/issue-flow/ai-panel";
-import { CreateIssueDialog } from "@/components/issue-flow/create-issue-dialog";
-import { IssueCollection } from "@/components/issue-flow/issue-collection";
-import { IssueDetail } from "@/components/issue-flow/issue-detail";
-import { WorkspaceSidebar } from "@/components/issue-flow/workspace-sidebar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Head, usePage } from '@inertiajs/react';
+import {
+    LayoutGrid,
+    List,
+    Plus,
+    Search,
+    Sparkles,
+    SunMoon,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
+import { toast } from 'sonner';
+import { index as listComments } from '@/actions/App/Http/Controllers/CommentController';
+import { update as updateIssue } from '@/actions/App/Http/Controllers/IssueController';
+import { AiPanel } from '@/components/issue-flow/ai-panel';
+import { CreateIssueDialog } from '@/components/issue-flow/create-issue-dialog';
+import { IssueCollection } from '@/components/issue-flow/issue-collection';
+import { IssueDetail } from '@/components/issue-flow/issue-detail';
+import { WorkspaceSidebar } from '@/components/issue-flow/workspace-sidebar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "@/components/ui/select";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { useAppearance } from "@/hooks/use-appearance";
-import { apiErrorMessage, getJson, patchJson } from "@/lib/api";
+} from '@/components/ui/select';
+import {
+    SidebarInset,
+    SidebarProvider,
+    SidebarTrigger,
+} from '@/components/ui/sidebar';
+import { useAppearance } from '@/hooks/use-appearance';
+import { apiErrorMessage, getJson, patchJson } from '@/lib/api';
 import type {
     ApiCollection,
     ApiPage,
@@ -28,21 +39,23 @@ import type {
     Issue,
     IssueStatus,
     Project,
+    ProjectMember,
     Workspace,
-} from "@/types/issue-flow";
+} from '@/types/issue-flow';
 
 type DashboardProps = {
     workspaces: Workspace[];
     workspace: Workspace | null;
     projects: Project[];
     project: Project | null;
+    assignees: ProjectMember[];
     issues: ApiPage<Issue> | null;
 };
 
-type IssueFilter = IssueStatus | "all";
+type IssueFilter = IssueStatus | 'all';
 
 export default function Dashboard(props: DashboardProps) {
-    const pageKey = `${props.workspace?.id ?? "none"}:${props.project?.id ?? "none"}`;
+    const pageKey = `${props.workspace?.id ?? 'none'}:${props.project?.id ?? 'none'}`;
 
     return <IssueWorkspace key={pageKey} {...props} />;
 }
@@ -52,15 +65,16 @@ function IssueWorkspace({
     workspace,
     projects,
     project,
+    assignees,
     issues: issuesPage,
 }: DashboardProps) {
     const { props } = usePage();
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const commentsRequest = useRef<AbortController | null>(null);
     const [issues, setIssues] = useState(issuesPage?.data ?? []);
-    const [search, setSearch] = useState("");
-    const [status, setStatus] = useState<IssueFilter>("all");
-    const [view, setView] = useState<"board" | "list">("board");
+    const [search, setSearch] = useState('');
+    const [status, setStatus] = useState<IssueFilter>('all');
+    const [view, setView] = useState<'board' | 'list'>('board');
     const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
     const [commentsLoading, setCommentsLoading] = useState(false);
@@ -68,20 +82,26 @@ function IssueWorkspace({
     const [createOpen, setCreateOpen] = useState(false);
 
     const filteredIssues = issues.filter((issue) => {
-        const matchesStatus = status === "all" || issue.status === status;
+        const matchesStatus = status === 'all' || issue.status === status;
         const term = search.trim().toLowerCase();
         const matchesSearch =
-            term === "" ||
-            `${issue.project.key}-${issue.number} ${issue.title}`.toLowerCase().includes(term);
+            term === '' ||
+            `${issue.project.key}-${issue.number} ${issue.title}`
+                .toLowerCase()
+                .includes(term);
 
         return matchesStatus && matchesSearch;
     });
 
     function replaceIssue(updatedIssue: Issue): void {
         setIssues((current) =>
-            current.map((issue) => (issue.id === updatedIssue.id ? updatedIssue : issue)),
+            current.map((issue) =>
+                issue.id === updatedIssue.id ? updatedIssue : issue,
+            ),
         );
-        setSelectedIssue((current) => (current?.id === updatedIssue.id ? updatedIssue : current));
+        setSelectedIssue((current) =>
+            current?.id === updatedIssue.id ? updatedIssue : current,
+        );
     }
 
     function openIssue(issue: Issue): void {
@@ -94,7 +114,10 @@ function IssueWorkspace({
         setComments([]);
         setCommentsLoading(true);
 
-        void getJson<ApiCollection<Comment>>(listComments.url(issue.id), request.signal)
+        void getJson<ApiCollection<Comment>>(
+            listComments.url(issue.id),
+            request.signal,
+        )
             .then((response) => setComments(response.data))
             .catch((error: unknown) => {
                 if (!request.signal.aborted) {
@@ -131,13 +154,15 @@ function IssueWorkspace({
             })
             .catch(() => {
                 replaceIssue({ ...issue, status: previousStatus });
-                toast.error("Could not move the issue. The board was restored.");
+                toast.error(
+                    'Could not move the issue. The board was restored.',
+                );
             });
     }
 
     return (
         <>
-            <Head title={project ? `${project.name} issues` : "Workspace"} />
+            <Head title={project ? `${project.name} issues` : 'Workspace'} />
             <SidebarProvider defaultOpen={props.sidebarOpen}>
                 <WorkspaceSidebar
                     workspaces={workspaces}
@@ -150,9 +175,14 @@ function IssueWorkspace({
                         <SidebarTrigger className="-ml-1" />
                         <div className="min-w-0 truncate text-sm">
                             <span className="text-muted-foreground">
-                                {workspace?.name ?? "Workspace"}
+                                {workspace?.name ?? 'Workspace'}
                             </span>
-                            {project && <span className="font-medium"> / {project.name}</span>}
+                            {project && (
+                                <span className="font-medium">
+                                    {' '}
+                                    / {project.name}
+                                </span>
+                            )}
                         </div>
                         <div className="ml-auto flex items-center gap-2">
                             <Button
@@ -161,20 +191,27 @@ function IssueWorkspace({
                                 aria-label="Toggle appearance"
                                 onClick={() =>
                                     updateAppearance(
-                                        resolvedAppearance === "dark" ? "light" : "dark",
+                                        resolvedAppearance === 'dark'
+                                            ? 'light'
+                                            : 'dark',
                                     )
                                 }
                             >
                                 <SunMoon className="size-4" />
                             </Button>
-                            <Button variant="outline" onClick={() => setChatOpen(true)}>
+                            <Button
+                                variant="outline"
+                                onClick={() => setChatOpen(true)}
+                            >
                                 <Sparkles className="size-4" />
                                 <span className="hidden sm:inline">Ask AI</span>
                             </Button>
                             {project?.can_create_issue && (
                                 <Button onClick={() => setCreateOpen(true)}>
                                     <Plus className="size-4" />
-                                    <span className="hidden sm:inline">New issue</span>
+                                    <span className="hidden sm:inline">
+                                        New issue
+                                    </span>
                                 </Button>
                             )}
                         </div>
@@ -201,7 +238,10 @@ function IssueWorkspace({
                                                     `Plan and track work in ${project.key}.`}
                                             </p>
                                         </div>
-                                        <ViewToggle view={view} onChange={setView} />
+                                        <ViewToggle
+                                            view={view}
+                                            onChange={setView}
+                                        />
                                     </div>
 
                                     <div className="flex flex-wrap items-center gap-2 py-4">
@@ -209,7 +249,11 @@ function IssueWorkspace({
                                             <Search className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
                                             <Input
                                                 value={search}
-                                                onChange={(event) => setSearch(event.target.value)}
+                                                onChange={(event) =>
+                                                    setSearch(
+                                                        event.target.value,
+                                                    )
+                                                }
                                                 className="pl-9"
                                                 placeholder="Filter this project..."
                                                 aria-label="Search issues"
@@ -225,20 +269,26 @@ function IssueWorkspace({
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="all">All statuses</SelectItem>
-                                                <SelectItem value="todo">Todo</SelectItem>
+                                                <SelectItem value="all">
+                                                    All statuses
+                                                </SelectItem>
+                                                <SelectItem value="todo">
+                                                    Todo
+                                                </SelectItem>
                                                 <SelectItem value="in_progress">
                                                     In progress
                                                 </SelectItem>
-                                                <SelectItem value="done">Done</SelectItem>
+                                                <SelectItem value="done">
+                                                    Done
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {(search || status !== "all") && (
+                                        {(search || status !== 'all') && (
                                             <Button
                                                 variant="ghost"
                                                 onClick={() => {
-                                                    setSearch("");
-                                                    setStatus("all");
+                                                    setSearch('');
+                                                    setStatus('all');
                                                 }}
                                             >
                                                 Clear
@@ -267,9 +317,12 @@ function IssueWorkspace({
                     comments={comments}
                     commentsLoading={commentsLoading}
                     canUpdate={project?.can_create_issue ?? false}
+                    assignees={assignees}
                     onClose={closeIssue}
                     onUpdated={replaceIssue}
-                    onCommentCreated={(comment) => setComments((current) => [...current, comment])}
+                    onCommentCreated={(comment) =>
+                        setComments((current) => [...current, comment])
+                    }
                 />
             )}
 
@@ -278,7 +331,10 @@ function IssueWorkspace({
                     open={createOpen}
                     onClose={() => setCreateOpen(false)}
                     project={project}
-                    onCreated={(issue) => setIssues((current) => [issue, ...current])}
+                    assignees={assignees}
+                    onCreated={(issue) =>
+                        setIssues((current) => [issue, ...current])
+                    }
                 />
             )}
 
@@ -296,22 +352,22 @@ function ViewToggle({
     view,
     onChange,
 }: {
-    view: "board" | "list";
-    onChange: (view: "board" | "list") => void;
+    view: 'board' | 'list';
+    onChange: (view: 'board' | 'list') => void;
 }) {
     return (
         <div className="bg-muted inline-flex w-fit rounded-lg border p-1">
             <Button
                 size="sm"
-                variant={view === "board" ? "secondary" : "ghost"}
-                onClick={() => onChange("board")}
+                variant={view === 'board' ? 'secondary' : 'ghost'}
+                onClick={() => onChange('board')}
             >
                 <LayoutGrid className="size-4" /> Board
             </Button>
             <Button
                 size="sm"
-                variant={view === "list" ? "secondary" : "ghost"}
-                onClick={() => onChange("list")}
+                variant={view === 'list' ? 'secondary' : 'ghost'}
+                onClick={() => onChange('list')}
             >
                 <List className="size-4" /> List
             </Button>
@@ -336,9 +392,12 @@ function EmptyProject() {
     return (
         <div className="grid flex-1 place-items-center rounded-lg border border-dashed p-10 text-center">
             <div>
-                <h1 className="text-xl font-semibold">No projects to display</h1>
+                <h1 className="text-xl font-semibold">
+                    No projects to display
+                </h1>
                 <p className="text-muted-foreground mt-2 text-sm">
-                    Select another workspace or ask a manager for project access.
+                    Select another workspace or ask a manager for project
+                    access.
                 </p>
             </div>
         </div>
@@ -346,7 +405,7 @@ function EmptyProject() {
 }
 
 function statusLabel(status: IssueStatus): string {
-    return status === "in_progress"
-        ? "In progress"
+    return status === 'in_progress'
+        ? 'In progress'
         : status.charAt(0).toUpperCase() + status.slice(1);
 }

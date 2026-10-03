@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProjectRole;
 use App\Http\Resources\IssueResource;
+use App\Http\Resources\ProjectMemberResource;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\WorkspaceResource;
 use App\Queries\Issues\IssueIndexQuery;
@@ -31,6 +33,15 @@ class DashboardController extends Controller
             : $projectIndexQuery->get($workspace, $user);
         $project = $projects->firstWhere('id', $request->integer('project'))
             ?? $projects->first();
+        $assignees = $project === null
+            ? collect()
+            : $project->users()
+                ->whereIn('project_user.role', [
+                    ProjectRole::Lead->value,
+                    ProjectRole::Member->value,
+                ])
+                ->orderBy('users.name')
+                ->get();
         $issues = $project === null
             ? null
             : $issueIndexQuery->paginate($project, ['per_page' => 100]);
@@ -44,6 +55,7 @@ class DashboardController extends Controller
             'project' => $project === null
                 ? null
                 : new ProjectResource($project)->resolve($request),
+            'assignees' => ProjectMemberResource::collection($assignees)->resolve($request),
             'issues' => $issues === null
                 ? null
                 : IssueResource::collection($issues)->response()->getData(true),

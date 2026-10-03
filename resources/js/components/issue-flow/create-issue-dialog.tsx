@@ -22,29 +22,38 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import type { Issue, IssuePriority, Project } from '@/types/issue-flow';
+import type {
+    Issue,
+    IssuePriority,
+    Project,
+    ProjectMember,
+} from '@/types/issue-flow';
 
 type CreateIssueData = {
     title: string;
     description: string;
     priority: IssuePriority;
+    assignee_id: number | null;
 };
 
 export function CreateIssueDialog({
     open,
     onClose,
     project,
+    assignees,
     onCreated,
 }: {
     open: boolean;
     onClose: () => void;
     project: Project;
+    assignees: ProjectMember[];
     onCreated: (issue: Issue) => void;
 }) {
     const form = useHttp<CreateIssueData, { data: Issue }>({
         title: '',
         description: '',
         priority: 'medium',
+        assignee_id: null,
     });
 
     function submit(event: FormEvent<HTMLFormElement>) {
@@ -119,6 +128,44 @@ export function CreateIssueDialog({
                             </SelectContent>
                         </Select>
                         <InputError message={form.errors.priority} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="issue-assignee">Assignee</Label>
+                        <Select
+                            value={
+                                form.data.assignee_id?.toString() ??
+                                'unassigned'
+                            }
+                            onValueChange={(value) =>
+                                form.setData(
+                                    'assignee_id',
+                                    value === 'unassigned'
+                                        ? null
+                                        : Number(value),
+                                )
+                            }
+                        >
+                            <SelectTrigger
+                                id="issue-assignee"
+                                className="w-full"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="unassigned">
+                                    Unassigned
+                                </SelectItem>
+                                {assignees.map((assignee) => (
+                                    <SelectItem
+                                        key={assignee.id}
+                                        value={assignee.id.toString()}
+                                    >
+                                        {assignee.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={form.errors.assignee_id} />
                     </div>
                     <DialogFooter>
                         <Button

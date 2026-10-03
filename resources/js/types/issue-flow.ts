@@ -1,6 +1,7 @@
-export type WorkspaceRole = "owner" | "admin" | "member";
-export type IssueStatus = "todo" | "in_progress" | "done";
-export type IssuePriority = "low" | "medium" | "high" | "urgent";
+export type WorkspaceRole = 'owner' | 'admin' | 'member';
+export type ProjectRole = 'lead' | 'member' | 'viewer';
+export type IssueStatus = 'todo' | 'in_progress' | 'done';
+export type IssuePriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export type Workspace = {
     id: number;
@@ -21,6 +22,13 @@ export type Project = {
     can_create_issue: boolean;
 };
 
+export type ProjectMember = {
+    id: number;
+    name: string;
+    email: string;
+    role: ProjectRole;
+};
+
 export type IssueLabel = {
     id: number;
     workspace_id: number;
@@ -35,7 +43,7 @@ export type Issue = {
     description: string | null;
     status: IssueStatus;
     priority: IssuePriority;
-    project: Pick<Project, "id" | "key">;
+    project: Pick<Project, 'id' | 'key'>;
     reporter: { id: number; name: string };
     assignee: { id: number; name: string } | null;
     labels: IssueLabel[];
