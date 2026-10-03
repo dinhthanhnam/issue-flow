@@ -38,6 +38,7 @@ import type {
     Comment,
     Issue,
     IssueLabel,
+    IssuePriority,
     IssueStatus,
     Project,
     ProjectMember,
@@ -55,6 +56,7 @@ type DashboardProps = {
 };
 
 type IssueFilter = IssueStatus | 'all';
+type PriorityFilter = IssuePriority | 'all';
 
 export default function Dashboard(props: DashboardProps) {
     const pageKey = `${props.workspace?.id ?? 'none'}:${props.project?.id ?? 'none'}`;
@@ -77,6 +79,9 @@ function IssueWorkspace({
     const [issues, setIssues] = useState(issuesPage?.data ?? []);
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState<IssueFilter>('all');
+    const [priority, setPriority] = useState<PriorityFilter>('all');
+    const [assignee, setAssignee] = useState('all');
+    const [label, setLabel] = useState('all');
     const [view, setView] = useState<'board' | 'list'>('board');
     const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
@@ -86,6 +91,16 @@ function IssueWorkspace({
 
     const filteredIssues = issues.filter((issue) => {
         const matchesStatus = status === 'all' || issue.status === status;
+        const matchesPriority =
+            priority === 'all' || issue.priority === priority;
+        const matchesAssignee =
+            assignee === 'all' ||
+            (assignee === 'unassigned'
+                ? issue.assignee === null
+                : issue.assignee?.id === Number(assignee));
+        const matchesLabel =
+            label === 'all' ||
+            issue.labels.some((issueLabel) => issueLabel.id === Number(label));
         const term = search.trim().toLowerCase();
         const matchesSearch =
             term === '' ||
@@ -93,8 +108,20 @@ function IssueWorkspace({
                 .toLowerCase()
                 .includes(term);
 
-        return matchesStatus && matchesSearch;
+        return (
+            matchesStatus &&
+            matchesPriority &&
+            matchesAssignee &&
+            matchesLabel &&
+            matchesSearch
+        );
     });
+    const hasActiveFilters =
+        search !== '' ||
+        status !== 'all' ||
+        priority !== 'all' ||
+        assignee !== 'all' ||
+        label !== 'all';
 
     function replaceIssue(updatedIssue: Issue): void {
         setIssues((current) =>
@@ -286,12 +313,91 @@ function IssueWorkspace({
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {(search || status !== 'all') && (
+                                        <Select
+                                            value={priority}
+                                            onValueChange={(value) =>
+                                                setPriority(
+                                                    value as PriorityFilter,
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger aria-label="Filter priority">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    All priorities
+                                                </SelectItem>
+                                                <SelectItem value="urgent">
+                                                    Urgent
+                                                </SelectItem>
+                                                <SelectItem value="high">
+                                                    High
+                                                </SelectItem>
+                                                <SelectItem value="medium">
+                                                    Medium
+                                                </SelectItem>
+                                                <SelectItem value="low">
+                                                    Low
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <Select
+                                            value={assignee}
+                                            onValueChange={setAssignee}
+                                        >
+                                            <SelectTrigger aria-label="Filter assignee">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    All assignees
+                                                </SelectItem>
+                                                <SelectItem value="unassigned">
+                                                    Unassigned
+                                                </SelectItem>
+                                                {assignees.map((item) => (
+                                                    <SelectItem
+                                                        key={item.id}
+                                                        value={item.id.toString()}
+                                                    >
+                                                        {item.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        {labels.length > 0 && (
+                                            <Select
+                                                value={label}
+                                                onValueChange={setLabel}
+                                            >
+                                                <SelectTrigger aria-label="Filter label">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">
+                                                        All labels
+                                                    </SelectItem>
+                                                    {labels.map((item) => (
+                                                        <SelectItem
+                                                            key={item.id}
+                                                            value={item.id.toString()}
+                                                        >
+                                                            {item.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                        {hasActiveFilters && (
                                             <Button
                                                 variant="ghost"
                                                 onClick={() => {
                                                     setSearch('');
                                                     setStatus('all');
+                                                    setPriority('all');
+                                                    setAssignee('all');
+                                                    setLabel('all');
                                                 }}
                                             >
                                                 Clear
