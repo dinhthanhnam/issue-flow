@@ -20,6 +20,7 @@ export type Project = {
     description: string | null;
     created_at: string;
     can_create_issue: boolean;
+    can_manage_members: boolean;
 };
 
 export type ProjectMember = {

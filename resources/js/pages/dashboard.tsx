@@ -12,6 +12,7 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { index as listComments } from '@/actions/App/Http/Controllers/CommentController';
 import { update as updateIssue } from '@/actions/App/Http/Controllers/IssueController';
+import { index as listProjectMembers } from '@/actions/App/Http/Controllers/ProjectMemberController';
 import { index as listWorkspaceMembers } from '@/actions/App/Http/Controllers/WorkspaceMemberController';
 import { AiPanel } from '@/components/issue-flow/ai-panel';
 import { CreateIssueDialog } from '@/components/issue-flow/create-issue-dialog';
@@ -19,9 +20,16 @@ import { CreateProjectDialog } from '@/components/issue-flow/create-project-dial
 import { CreateWorkspaceDialog } from '@/components/issue-flow/create-workspace-dialog';
 import { IssueCollection } from '@/components/issue-flow/issue-collection';
 import { IssueDetail } from '@/components/issue-flow/issue-detail';
+import { ProjectMembersSheet } from '@/components/issue-flow/project-members-sheet';
 import { WorkspaceSidebar } from '@/components/issue-flow/workspace-sidebar';
 import { WorkspaceMembersSheet } from '@/components/issue-flow/workspace-members-sheet';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -83,6 +91,7 @@ function IssueWorkspace({
     const { resolvedAppearance, updateAppearance } = useAppearance();
     const commentsRequest = useRef<AbortController | null>(null);
     const workspaceMembersRequest = useRef<AbortController | null>(null);
+    const projectMembersRequest = useRef<AbortController | null>(null);
     const [issues, setIssues] = useState(issuesPage?.data ?? []);
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState<IssueFilter>('all');
@@ -103,6 +112,9 @@ function IssueWorkspace({
     );
     const [workspaceMembersLoading, setWorkspaceMembersLoading] =
         useState(false);
+    const [projectMembersOpen, setProjectMembersOpen] = useState(false);
+    const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+    const [projectMembersLoading, setProjectMembersLoading] = useState(false);
     const canCreateProject =
         workspace !== null &&
         workspace.archived_at === null &&
@@ -223,6 +235,42 @@ function IssueWorkspace({
         setWorkspaceMembersLoading(false);
     }
 
+    function openProjectMembers(): void {
+        if (project === null) {
+            return;
+        }
+
+        projectMembersRequest.current?.abort();
+        const request = new AbortController();
+        projectMembersRequest.current = request;
+
+        setProjectMembersOpen(true);
+        setProjectMembers([]);
+        setProjectMembersLoading(true);
+
+        void getJson<ApiCollection<ProjectMember>>(
+            listProjectMembers.url(project.id),
+            request.signal,
+        )
+            .then((response) => setProjectMembers(response.data))
+            .catch((error: unknown) => {
+                if (!request.signal.aborted) {
+                    toast.error(apiErrorMessage(error));
+                }
+            })
+            .finally(() => {
+                if (!request.signal.aborted) {
+                    setProjectMembersLoading(false);
+                }
+            });
+    }
+
+    function closeProjectMembers(): void {
+        projectMembersRequest.current?.abort();
+        setProjectMembersOpen(false);
+        setProjectMembersLoading(false);
+    }
+
     function moveIssue(issue: Issue, nextStatus: IssueStatus): void {
         const previousStatus = issue.status;
         const optimisticIssue = { ...issue, status: nextStatus };
@@ -288,15 +336,30 @@ function IssueWorkspace({
                                 <SunMoon className="size-4" />
                             </Button>
                             {workspace && (
-                                <Button
-                                    variant="outline"
-                                    onClick={openWorkspaceMembers}
-                                >
-                                    <Users className="size-4" />
-                                    <span className="hidden md:inline">
-                                        Members
-                                    </span>
-                                </Button>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="outline">
+                                            <Users className="size-4" />
+                                            <span className="hidden md:inline">
+                                                Members
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            onSelect={openWorkspaceMembers}
+                                        >
+                                            Workspace members
+                                        </DropdownMenuItem>
+                                        {project && (
+                                            <DropdownMenuItem
+                                                onSelect={openProjectMembers}
+                                            >
+                                                Project members
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             )}
                             <Button
                                 variant="outline"
@@ -550,6 +613,19 @@ function IssueWorkspace({
                     members={workspaceMembers}
                     onClose={closeWorkspaceMembers}
                     onMembersChange={setWorkspaceMembers}
+                />
+            )}
+
+            {workspace && project && (
+                <ProjectMembersSheet
+                    open={projectMembersOpen}
+                    loading={projectMembersLoading}
+                    workspace={workspace}
+                    project={project}
+                    currentUserId={props.auth.user.id}
+                    members={projectMembers}
+                    onClose={closeProjectMembers}
+                    onMembersChange={setProjectMembers}
                 />
             )}
 
