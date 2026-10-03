@@ -13,6 +13,8 @@ import { index as listComments } from '@/actions/App/Http/Controllers/CommentCon
 import { update as updateIssue } from '@/actions/App/Http/Controllers/IssueController';
 import { AiPanel } from '@/components/issue-flow/ai-panel';
 import { CreateIssueDialog } from '@/components/issue-flow/create-issue-dialog';
+import { CreateProjectDialog } from '@/components/issue-flow/create-project-dialog';
+import { CreateWorkspaceDialog } from '@/components/issue-flow/create-workspace-dialog';
 import { IssueCollection } from '@/components/issue-flow/issue-collection';
 import { IssueDetail } from '@/components/issue-flow/issue-detail';
 import { WorkspaceSidebar } from '@/components/issue-flow/workspace-sidebar';
@@ -88,6 +90,12 @@ function IssueWorkspace({
     const [commentsLoading, setCommentsLoading] = useState(false);
     const [chatOpen, setChatOpen] = useState(false);
     const [createOpen, setCreateOpen] = useState(false);
+    const [createProjectOpen, setCreateProjectOpen] = useState(false);
+    const [createWorkspaceOpen, setCreateWorkspaceOpen] = useState(false);
+    const canCreateProject =
+        workspace !== null &&
+        workspace.archived_at === null &&
+        ['owner', 'admin'].includes(workspace.role);
 
     const filteredIssues = issues.filter((issue) => {
         const matchesStatus = status === 'all' || issue.status === status;
@@ -199,6 +207,9 @@ function IssueWorkspace({
                     workspace={workspace}
                     projects={projects}
                     project={project}
+                    canCreateProject={canCreateProject}
+                    onCreateWorkspace={() => setCreateWorkspaceOpen(true)}
+                    onCreateProject={() => setCreateProjectOpen(true)}
                 />
                 <SidebarInset className="min-w-0">
                     <header className="flex h-14 shrink-0 items-center gap-3 border-b px-4 sm:px-6">
@@ -249,8 +260,19 @@ function IssueWorkspace({
 
                     <main className="flex min-h-0 min-w-0 flex-1 overflow-auto px-4 py-5 sm:px-6 lg:px-8">
                         <div className="mx-auto flex min-h-full w-full max-w-[1680px] flex-col">
-                            {!workspace && <EmptyWorkspace />}
-                            {workspace && !project && <EmptyProject />}
+                            {!workspace && (
+                                <EmptyWorkspace
+                                    onCreate={() =>
+                                        setCreateWorkspaceOpen(true)
+                                    }
+                                />
+                            )}
+                            {workspace && !project && (
+                                <EmptyProject
+                                    canCreate={canCreateProject}
+                                    onCreate={() => setCreateProjectOpen(true)}
+                                />
+                            )}
                             {project && (
                                 <>
                                     <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -448,6 +470,19 @@ function IssueWorkspace({
                 />
             )}
 
+            <CreateWorkspaceDialog
+                open={createWorkspaceOpen}
+                onClose={() => setCreateWorkspaceOpen(false)}
+            />
+
+            {workspace && canCreateProject && (
+                <CreateProjectDialog
+                    open={createProjectOpen}
+                    onClose={() => setCreateProjectOpen(false)}
+                    workspace={workspace}
+                />
+            )}
+
             <AiPanel
                 open={chatOpen}
                 onClose={() => setChatOpen(false)}
@@ -485,7 +520,7 @@ function ViewToggle({
     );
 }
 
-function EmptyWorkspace() {
+function EmptyWorkspace({ onCreate }: { onCreate: () => void }) {
     return (
         <div className="grid flex-1 place-items-center rounded-lg border border-dashed p-10 text-center">
             <div>
@@ -493,12 +528,22 @@ function EmptyWorkspace() {
                 <p className="text-muted-foreground mt-2 text-sm">
                     Create or join a workspace to start managing projects.
                 </p>
+                <Button className="mt-5" onClick={onCreate}>
+                    <Plus className="size-4" />
+                    New workspace
+                </Button>
             </div>
         </div>
     );
 }
 
-function EmptyProject() {
+function EmptyProject({
+    canCreate,
+    onCreate,
+}: {
+    canCreate: boolean;
+    onCreate: () => void;
+}) {
     return (
         <div className="grid flex-1 place-items-center rounded-lg border border-dashed p-10 text-center">
             <div>
@@ -506,9 +551,16 @@ function EmptyProject() {
                     No projects to display
                 </h1>
                 <p className="text-muted-foreground mt-2 text-sm">
-                    Select another workspace or ask a manager for project
-                    access.
+                    {canCreate
+                        ? 'Create the first project in this workspace.'
+                        : 'Select another workspace or ask a manager for project access.'}
                 </p>
+                {canCreate && (
+                    <Button className="mt-5" onClick={onCreate}>
+                        <Plus className="size-4" />
+                        New project
+                    </Button>
+                )}
             </div>
         </div>
     );
