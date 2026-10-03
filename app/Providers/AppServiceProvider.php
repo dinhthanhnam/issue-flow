@@ -2,8 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\Issue;
-use App\Observers\IssueObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -25,8 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Issue::observe(IssueObserver::class);
-
         $this->configureDefaults();
     }
 
