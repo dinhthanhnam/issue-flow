@@ -1,7 +1,7 @@
-import { http, HttpResponseError } from "@inertiajs/core";
+import { http, HttpResponseError } from '@inertiajs/core';
 
 async function requestJson<T>(
-    method: "get" | "patch",
+    method: 'get' | 'patch',
     url: string,
     data?: unknown,
     signal?: AbortSignal,
@@ -10,31 +10,53 @@ async function requestJson<T>(
         method,
         url,
         data,
-        headers: { Accept: "application/json" },
+        headers: { Accept: 'application/json' },
         signal,
     });
 
     return JSON.parse(response.data) as T;
 }
 
-export async function getJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-    return requestJson<T>("get", url, undefined, signal);
+async function requestWithoutResponse(
+    method: 'post' | 'delete',
+    url: string,
+): Promise<void> {
+    await http.getClient().request({
+        method,
+        url,
+        headers: { Accept: 'application/json' },
+    });
+}
+
+export async function getJson<T>(
+    url: string,
+    signal?: AbortSignal,
+): Promise<T> {
+    return requestJson<T>('get', url, undefined, signal);
 }
 
 export async function patchJson<T>(url: string, data: unknown): Promise<T> {
-    return requestJson<T>("patch", url, data);
+    return requestJson<T>('patch', url, data);
+}
+
+export async function postWithoutResponse(url: string): Promise<void> {
+    return requestWithoutResponse('post', url);
+}
+
+export async function deleteWithoutResponse(url: string): Promise<void> {
+    return requestWithoutResponse('delete', url);
 }
 
 export function apiErrorMessage(error: unknown): string {
     if (error instanceof HttpResponseError) {
         if (error.response.status === 401) {
-            return "Your session has expired. Please sign in again.";
+            return 'Your session has expired. Please sign in again.';
         }
 
         if (error.response.status === 403) {
-            return "You do not have access to this content.";
+            return 'You do not have access to this content.';
         }
     }
 
-    return "Could not load data. Please try again.";
+    return 'Could not load data. Please try again.';
 }

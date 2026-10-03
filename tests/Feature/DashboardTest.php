@@ -35,6 +35,7 @@ test('authenticated users can visit the dashboard', function () {
             ->where('workspaces', [])
             ->where('workspace', null)
             ->where('projects', [])
+            ->where('labels', [])
             ->where('project', null)
             ->where('assignees', [])
             ->where('issues', null));
@@ -58,6 +59,7 @@ test('dashboard provides the selected workspace project and issues', function ()
             ->where('project.id', $project->id)
             ->has('workspaces', 1)
             ->has('projects', 1)
+            ->has('labels', 3)
             ->has('assignees', 1)
             ->where('assignees.0.id', $user->id)
             ->has('issues.data', 5));

@@ -37,6 +37,7 @@ import type {
     ApiPage,
     Comment,
     Issue,
+    IssueLabel,
     IssueStatus,
     Project,
     ProjectMember,
@@ -47,6 +48,7 @@ type DashboardProps = {
     workspaces: Workspace[];
     workspace: Workspace | null;
     projects: Project[];
+    labels: IssueLabel[];
     project: Project | null;
     assignees: ProjectMember[];
     issues: ApiPage<Issue> | null;
@@ -64,6 +66,7 @@ function IssueWorkspace({
     workspaces,
     workspace,
     projects,
+    labels,
     project,
     assignees,
     issues: issuesPage,
@@ -318,6 +321,7 @@ function IssueWorkspace({
                     commentsLoading={commentsLoading}
                     canUpdate={project?.can_create_issue ?? false}
                     assignees={assignees}
+                    availableLabels={labels}
                     onClose={closeIssue}
                     onUpdated={replaceIssue}
                     onCommentCreated={(comment) =>

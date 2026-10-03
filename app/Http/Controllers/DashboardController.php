@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ProjectRole;
 use App\Http\Resources\IssueResource;
+use App\Http\Resources\LabelResource;
 use App\Http\Resources\ProjectMemberResource;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\WorkspaceResource;
@@ -31,6 +32,9 @@ class DashboardController extends Controller
         $projects = $workspace === null
             ? collect()
             : $projectIndexQuery->get($workspace, $user);
+        $labels = $workspace === null
+            ? collect()
+            : $workspace->labels()->orderBy('name')->get();
         $project = $projects->firstWhere('id', $request->integer('project'))
             ?? $projects->first();
         $assignees = $project === null
@@ -52,6 +56,7 @@ class DashboardController extends Controller
                 ? null
                 : new WorkspaceResource($workspace)->resolve($request),
             'projects' => ProjectResource::collection($projects)->resolve($request),
+            'labels' => LabelResource::collection($labels)->resolve($request),
             'project' => $project === null
                 ? null
                 : new ProjectResource($project)->resolve($request),

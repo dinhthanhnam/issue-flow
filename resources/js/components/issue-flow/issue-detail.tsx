@@ -1,14 +1,24 @@
 import { useHttp } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { useState } from 'react';
-import { MessageSquare, Pencil } from 'lucide-react';
+import { MessageSquare, Pencil, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { store as storeComment } from '@/actions/App/Http/Controllers/CommentController';
+import {
+    destroy as detachLabel,
+    store as attachLabel,
+} from '@/actions/App/Http/Controllers/IssueLabelController';
 import { update as updateIssue } from '@/actions/App/Http/Controllers/IssueController';
 import { issueKey } from '@/components/issue-flow/issue-collection';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -25,9 +35,11 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
+import { deleteWithoutResponse, postWithoutResponse } from '@/lib/api';
 import type {
     Comment,
     Issue,
+    IssueLabel,
     IssuePriority,
     IssueStatus,
     ProjectMember,
@@ -47,6 +59,7 @@ type Props = {
     commentsLoading: boolean;
     canUpdate: boolean;
     assignees: ProjectMember[];
+    availableLabels: IssueLabel[];
     onClose: () => void;
     onUpdated: (issue: Issue) => void;
     onCommentCreated: (comment: Comment) => void;
@@ -58,11 +71,13 @@ export function IssueDetail({
     commentsLoading,
     canUpdate,
     assignees,
+    availableLabels,
     onClose,
     onUpdated,
     onCommentCreated,
 }: Props) {
     const [editing, setEditing] = useState(false);
+    const [updatingLabel, setUpdatingLabel] = useState<number | null>(null);
     const issueForm = useHttp<UpdateIssueData, { data: Issue }>({
         title: issue.title,
         description: issue.description ?? '',
@@ -119,6 +134,37 @@ export function IssueDetail({
             .catch(() => toast.error('Could not add the comment.'));
     }
 
+    function toggleLabel(label: IssueLabel): void {
+        if (updatingLabel !== null) {
+            return;
+        }
+
+        const isAttached = issue.labels.some(
+            (current) => current.id === label.id,
+        );
+        const nextLabels = isAttached
+            ? issue.labels.filter((current) => current.id !== label.id)
+            : [...issue.labels, label].sort((left, right) =>
+                  left.name.localeCompare(right.name),
+              );
+        const previousIssue = issue;
+
+        setUpdatingLabel(label.id);
+        onUpdated({ ...issue, labels: nextLabels });
+
+        const routeArguments = { issue: issue.id, label: label.id };
+        const request = isAttached
+            ? deleteWithoutResponse(detachLabel.url(routeArguments))
+            : postWithoutResponse(attachLabel.url(routeArguments));
+
+        void request
+            .catch(() => {
+                onUpdated(previousIssue);
+                toast.error('Could not update issue labels.');
+            })
+            .finally(() => setUpdatingLabel(null));
+    }
+
     return (
         <Sheet open onOpenChange={(open) => !open && onClose()}>
             <SheetContent className="w-full gap-0 p-0 sm:max-w-xl">
@@ -150,11 +196,20 @@ export function IssueDetail({
                             form={issueForm}
                             issue={issue}
                             assignees={assignees}
+                            availableLabels={availableLabels}
+                            updatingLabel={updatingLabel}
+                            onToggleLabel={toggleLabel}
                             onSubmit={saveIssue}
                             onCancel={cancelEditing}
                         />
                     ) : (
-                        <IssueOverview issue={issue} />
+                        <IssueOverview
+                            issue={issue}
+                            availableLabels={availableLabels}
+                            canUpdate={canUpdate}
+                            updatingLabel={updatingLabel}
+                            onToggleLabel={toggleLabel}
+                        />
                     )}
 
                     <div className="my-6 border-t" />
@@ -234,7 +289,19 @@ export function IssueDetail({
     );
 }
 
-function IssueOverview({ issue }: { issue: Issue }) {
+function IssueOverview({
+    issue,
+    availableLabels,
+    canUpdate,
+    updatingLabel,
+    onToggleLabel,
+}: {
+    issue: Issue;
+    availableLabels: IssueLabel[];
+    canUpdate: boolean;
+    updatingLabel: number | null;
+    onToggleLabel: (label: IssueLabel) => void;
+}) {
     return (
         <>
             <h2 className="text-xl font-semibold tracking-tight">
@@ -258,7 +325,13 @@ function IssueOverview({ issue }: { issue: Issue }) {
                 <span>{issue.reporter.name}</span>
 
                 <span className="text-muted-foreground">Labels</span>
-                <IssueLabels issue={issue} />
+                <IssueLabels
+                    issue={issue}
+                    availableLabels={availableLabels}
+                    canUpdate={canUpdate}
+                    updatingLabel={updatingLabel}
+                    onToggle={onToggleLabel}
+                />
             </div>
         </>
     );
@@ -268,12 +341,18 @@ function IssueEditForm({
     form,
     issue,
     assignees,
+    availableLabels,
+    updatingLabel,
+    onToggleLabel,
     onSubmit,
     onCancel,
 }: {
     form: ReturnType<typeof useHttp<UpdateIssueData, { data: Issue }>>;
     issue: Issue;
     assignees: ProjectMember[];
+    availableLabels: IssueLabel[];
+    updatingLabel: number | null;
+    onToggleLabel: (label: IssueLabel) => void;
     onSubmit: (event: FormEvent<HTMLFormElement>) => void;
     onCancel: () => void;
 }) {
@@ -405,7 +484,13 @@ function IssueEditForm({
                 <span>{issue.reporter.name}</span>
 
                 <span className="text-muted-foreground">Labels</span>
-                <IssueLabels issue={issue} />
+                <IssueLabels
+                    issue={issue}
+                    availableLabels={availableLabels}
+                    canUpdate
+                    updatingLabel={updatingLabel}
+                    onToggle={onToggleLabel}
+                />
             </div>
 
             <div className="flex justify-end gap-2 border-t pt-4">
@@ -423,16 +508,66 @@ function IssueEditForm({
     );
 }
 
-function IssueLabels({ issue }: { issue: Issue }) {
+function IssueLabels({
+    issue,
+    availableLabels,
+    canUpdate,
+    updatingLabel,
+    onToggle,
+}: {
+    issue: Issue;
+    availableLabels: IssueLabel[];
+    canUpdate: boolean;
+    updatingLabel: number | null;
+    onToggle: (label: IssueLabel) => void;
+}) {
     return (
-        <span className="flex flex-wrap gap-1">
+        <span className="flex flex-wrap items-center gap-1">
             {issue.labels.length > 0
                 ? issue.labels.map((label) => (
                       <Badge key={label.id} variant="secondary">
+                          <span
+                              className="size-1.5 rounded-full"
+                              style={{ backgroundColor: label.color }}
+                          />
                           {label.name}
                       </Badge>
                   ))
                 : 'None'}
+            {canUpdate && availableLabels.length > 0 && (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-6 rounded-full"
+                            aria-label="Manage issue labels"
+                            disabled={updatingLabel !== null}
+                        >
+                            <Plus className="size-3.5" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-48">
+                        {availableLabels.map((label) => (
+                            <DropdownMenuCheckboxItem
+                                key={label.id}
+                                checked={issue.labels.some(
+                                    (current) => current.id === label.id,
+                                )}
+                                disabled={updatingLabel !== null}
+                                onCheckedChange={() => onToggle(label)}
+                            >
+                                <span
+                                    className="size-2 rounded-full"
+                                    style={{ backgroundColor: label.color }}
+                                />
+                                {label.name}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            )}
         </span>
     );
 }
